@@ -119,9 +119,7 @@ export default function AdminProjects() {
       setSaving(true);
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-      // If cover is in new files range, pass relative index into new files
-      const coverInNew = coverIndex - existingImages.length;
-      fd.append('cover_index', coverInNew >= 0 ? coverInNew : 0);
+      fd.append('cover_index', coverIndex);
       fd.append('deleted_image_ids', JSON.stringify(deletedImageIds));
       newFiles.forEach(f => fd.append('images', f));
 
