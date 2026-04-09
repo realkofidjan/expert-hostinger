@@ -5,9 +5,12 @@ let io;
 const init = (server) => {
   io = new Server(server, {
     cors: {
-      origin: true,
+      origin: "*",
+      methods: ["GET", "POST"],
       credentials: true
-    }
+    },
+    transports: ['polling', 'websocket'],
+    allowEIO3: true
   });
 
   io.on('connection', (socket) => {
