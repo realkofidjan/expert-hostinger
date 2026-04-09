@@ -2,6 +2,7 @@ const db = require('../config/db');
 const { getAssetPath } = require('../utils/imageHandler');
 const fs = require('fs');
 const path = require('path');
+const { optimizeImage } = require('../utils/imageOptimizer');
 
 // ── Ensure tables exist ────────────────────────────────────────────────────────
 (async () => {
@@ -43,14 +44,18 @@ const slugify = (str) =>
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-');
 
-const saveImages = (files, projectId) => {
+const saveImages = async (files, projectId) => {
   const { absoluteDir, relativeDir } = getAssetPath('content', `projects/${projectId}`);
-  return files.map((file, i) => {
+  const urls = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
     const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
     const filename = `${Date.now()}-${i}${ext}`;
-    fs.writeFileSync(path.join(absoluteDir, filename), file.buffer);
-    return `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
-  });
+    const absolutePath = path.join(absoluteDir, filename);
+    await optimizeImage(file.buffer, absolutePath);
+    urls.push(`/assets/${relativeDir}/${filename}`.replace(/\\/g, '/'));
+  }
+  return urls;
 };
 
 const attachImages = async (projects) => {
@@ -121,15 +126,17 @@ const create = async (req, res) => {
     const [[existing]] = await db.query('SELECT id FROM projects WHERE slug = ?', [slug]);
     if (existing) slug = `${slug}-${Date.now()}`;
 
+    const safeYear = (year === '' || year === undefined) ? null : parseInt(year);
+
     const [result] = await db.query(
       `INSERT INTO projects (title, slug, description, client, location, year, status) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [title, slug, description || null, client || null, location || null, year || null, status || 'draft']
+      [title, slug, description || null, client || null, location || null, safeYear, status || 'draft']
     );
     const projectId = result.insertId;
 
     let coverImage = null;
     if (req.files && req.files.length > 0) {
-      const urls = saveImages(req.files, projectId);
+      const urls = await saveImages(req.files, projectId);
       const coverIdx = parseInt(cover_index) || 0;
       coverImage = urls[Math.min(coverIdx, urls.length - 1)];
       for (let i = 0; i < urls.length; i++) {
@@ -182,7 +189,7 @@ const update = async (req, res) => {
         'SELECT sort_order FROM project_images WHERE project_id = ? ORDER BY sort_order DESC LIMIT 1', [id]
       );
       let nextOrder = last.length ? (last[0].sort_order + 1) : 0;
-      const urls = saveImages(req.files, id);
+      const urls = await saveImages(req.files, id);
       for (const url of urls) {
         await db.query(
           `INSERT INTO project_images (project_id, image_url, sort_order) VALUES (?, ?, ?)`,
@@ -201,10 +208,12 @@ const update = async (req, res) => {
       if (allImgs[idx]) coverImage = allImgs[idx].image_url;
     }
 
+    const safeYear = (year === '' || year === undefined) ? project.year : parseInt(year);
+
     await db.query(
       `UPDATE projects SET title=?, description=?, client=?, location=?, year=?, status=?, cover_image=? WHERE id=?`,
       [title || project.title, description ?? project.description, client ?? project.client,
-       location ?? project.location, year ?? project.year, status || project.status, coverImage, id]
+       location ?? project.location, safeYear, status || project.status, coverImage, id]
     );
 
     await db.query(
