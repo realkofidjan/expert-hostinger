@@ -6,7 +6,7 @@ import api from '../api';
 import { ArrowLeft, Calendar, ArrowRight, BookOpen, X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
 import { decodeId, createBlogUrl } from '../utils/url';
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5001';
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
 const imgUrl = (url) => (!url ? '' : url.startsWith('http') ? url : `${BACKEND_URL}${url}`);
 const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 

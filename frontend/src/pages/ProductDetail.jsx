@@ -14,7 +14,7 @@ import { useCart } from '../context/CartContext';
 import { useAlert } from '../context/AlertContext';
 import { decodeId } from '../utils/url';
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5001';
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
 
 const getColorCode = (name) => {
   const colors = {

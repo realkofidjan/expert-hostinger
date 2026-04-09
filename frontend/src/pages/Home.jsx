@@ -773,7 +773,7 @@ const Home = () => {
                     <div className={`relative overflow-hidden ${i === 0 ? 'aspect-video' : 'h-48'}`}>
                       {post.image_url ? (
                         <img
-                          src={post.image_url.startsWith('http') ? post.image_url : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5001'}${post.image_url}`}
+                          src={post.image_url.startsWith('http') ? post.image_url : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || ''}${post.image_url}`}
                           alt={post.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />

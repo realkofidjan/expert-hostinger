@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Pagination from '../../components/admin/Pagination';
 import api from '../../api';
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5001';
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
 import AdminLayout from '../../components/admin/AdminLayout';
 import {
   Package, Plus, Search, Filter, MoreVertical,

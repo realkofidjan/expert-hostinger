@@ -20,7 +20,7 @@ export const SocketProvider = ({ children }) => {
     if (socketRef.current) return;
 
     const user = getUser();
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
     const serverUrl = apiBase.startsWith('http') ? apiBase.replace('/api', '') : window.location.origin;
     
     console.log('Connecting to real-time server at:', serverUrl);

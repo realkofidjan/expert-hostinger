@@ -695,7 +695,7 @@ const Profile = () => {
                         <div key={i} className="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-2xl">
                           <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 overflow-hidden">
                             {item.image_url
-                              ? <img src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5001'}${item.image_url}`} alt={item.product_name} className="w-full h-full object-cover" />
+                              ? <img src={`${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || ''}${item.image_url}`} alt={item.product_name} className="w-full h-full object-cover" />
                               : <Package size={18} className="text-gray-400" />}
                           </div>
                           <div className="flex-1 min-w-0">
