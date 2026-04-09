@@ -5,19 +5,7 @@ let io;
 const init = (server) => {
   io = new Server(server, {
     cors: {
-      origin: (origin, callback) => {
-        const allowed = [
-          'http://localhost:5173',
-          'http://127.0.0.1:5173',
-          'http://100.102.175.73:5173',
-          'http://100.102.175.73:5001'
-        ];
-        if (!origin || allowed.includes(origin)) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      },
+      origin: true,
       credentials: true
     }
   });

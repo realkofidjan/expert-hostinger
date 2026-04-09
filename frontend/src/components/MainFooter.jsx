@@ -134,10 +134,10 @@ const MainFooter = () => {
           <h3 className="text-lg font-bold text-white mb-8 uppercase tracking-[0.2em]">Connect With Us</h3>
           <div className="flex justify-center gap-6">
             {[
-              { component: <TwitterIcon />, href: '#' },
-              { component: <InstagramIcon />, href: 'https://www.instagram.com/expertofficefurnish' },
-              { component: <FacebookIcon />, href: 'https://www.facebook.com/expertofficefurnishgh/' },
-              { component: <LinkedinIcon />, href: '#' },
+              { component: <TwitterIcon />, href: 'https://x.com/expertfurnish?s=21' },
+              { component: <InstagramIcon />, href: 'https://www.instagram.com/expertofficefurnish?igsh=NzgwMXFybXlpNWo3' },
+              { component: <FacebookIcon />, href: 'https://www.facebook.com/share/1HHFxrUmLk/?mibextid=wwXIfr' },
+              { component: <LinkedinIcon />, href: 'https://www.linkedin.com/company/expert-office-furnish-company-limited/' },
             ].map((social, i) => (
               <a
                 key={i}

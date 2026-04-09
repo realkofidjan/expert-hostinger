@@ -34,6 +34,15 @@ const Navbar = () => {
           {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
+        {/* Call button */}
+        <a 
+          href="tel:+233571386600"
+          className="w-12 h-12 rounded-xl glass border border-white/10 flex items-center justify-center text-[var(--text-primary)] hover:bg-white/5 transition-all shadow-xl"
+          title="Call Support"
+        >
+          <Phone size={20} />
+        </a>
+
         {token ? (
           <div className="flex items-center gap-3">
             <button

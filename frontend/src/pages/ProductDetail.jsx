@@ -141,7 +141,7 @@ const ProductDetail = () => {
 
 Could you please provide a formal quote for this?`;
 
-    const whatsappUrl = `https://wa.me/233574101615?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/233507103200?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 

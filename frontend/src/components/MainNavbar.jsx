@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Moon, Sun, Menu, X, ChevronRight, LogOut, LayoutDashboard } from 'lucide-react';
+import { Search, ShoppingCart, User, Moon, Sun, Menu, X, ChevronRight, LogOut, LayoutDashboard, Phone } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 
@@ -135,6 +135,15 @@ const MainNavbar = () => {
               <button className={dynamicIconClass} onClick={toggleTheme} aria-label="Toggle theme">
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
+
+              {/* Call button */}
+              <a 
+                href="tel:+233571386600"
+                className={dynamicIconClass}
+                title="Call Support"
+              >
+                <Phone size={20} />
+              </a>
 
               {/* Cart */}
               <button className={`${dynamicIconClass} relative`} onClick={() => setIsCartOpen(true)} aria-label="Open cart">

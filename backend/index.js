@@ -8,6 +8,7 @@ const http = require('http');
 const socketUtils = require('./src/utils/socket');
 const multer = require('multer');
 const { protect, authorize, optionalProtect } = require('./src/middleware/auth');
+const underConstruction = require('./src/middleware/underConstruction');
 const AuthController = require('./src/controllers/AuthController');
 const BulkUploadController = require('./src/controllers/BulkUploadController');
 const OrderController = require('./src/controllers/OrderController');
@@ -28,6 +29,7 @@ const DeliveryController = require('./src/controllers/DeliveryController');
 const AddressController = require('./src/controllers/AddressController');
 const { NotificationController } = require('./src/controllers/NotificationController');
 const ProjectsController = require('./src/controllers/ProjectsController');
+const { exportBackup, restoreBackup } = require('./src/controllers/BackupController');
 
 // ── Multer: in-memory for images, disk for receipts ──────────────────────────
 const upload = multer({ storage: multer.memoryStorage() });
@@ -72,6 +74,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
+app.use(underConstruction);
 
 // Serve Static Files
 const frontendBuildPath = path.join(__dirname, 'public');
@@ -201,6 +204,10 @@ app.get('/api/admin/projects', protect, authorize('admin', 'sub-admin', 'staff')
 app.post('/api/admin/projects', protect, authorize('admin', 'sub-admin'), upload.array('images', 20), ProjectsController.create);
 app.put('/api/admin/projects/:id', protect, authorize('admin', 'sub-admin'), upload.array('images', 20), ProjectsController.update);
 app.delete('/api/admin/projects/:id', protect, authorize('admin', 'sub-admin'), ProjectsController.remove);
+
+// ── Backup & Restore ─────────────────────────────────────────────────────────
+app.get('/api/admin/backup/export', protect, authorize('admin'), exportBackup);
+app.post('/api/admin/backup/restore', protect, authorize('admin'), upload.single('backup'), restoreBackup);
 
 // ── Bulk Upload ───────────────────────────────────────────────────────────────
 app.get('/api/bulk-upload/count', protect, authorize('admin', 'sub-admin'), BulkUploadController.getProductCount);

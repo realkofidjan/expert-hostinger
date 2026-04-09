@@ -32,6 +32,7 @@ import CartPage from './pages/CartPage';
 import OrderSuccess from './pages/OrderSuccess';
 import UploadReceipt from './pages/UploadReceipt';
 import Services from './pages/Services';
+import UnderConstruction from './pages/UnderConstruction';
 import WhatsAppButton from './components/WhatsAppButton';
 
 // Fires PageLoader on every route change (skips the very first render — that's handled by the splash loader)
@@ -82,6 +83,14 @@ const ConditionalWhatsAppButton = () => {
 
 function App() {
   const [loading, setLoading] = useState(true);
+  const [underConstruction, setUnderConstruction] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => { if (data?.under_construction === 'true') setUnderConstruction(true); })
+      .catch(() => {});
+  }, []);
 
   return (
     <ThemeProvider>
@@ -95,19 +104,19 @@ function App() {
               <CartSidebar />
               <Routes>
                 {/* ... existing routes ... */}
-                <Route path="/" element={<Home />} />
-                <Route path="/products" element={<PublicProducts />} />
-                <Route path="/projects" element={<PublicProjects />} />
-                <Route path="/services" element={<Services />} />
-                <Route path="/blog" element={<BlogListing />} />
-                <Route path="/blog/:id" element={<BlogPost />} />
-                <Route path="/products/:id" element={<ProductDetail />} />
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/order-success" element={<OrderSuccess />} />
-                <Route path="/upload-receipt" element={<UploadReceipt />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+                <Route path="/" element={underConstruction ? <UnderConstruction /> : <Home />} />
+                <Route path="/products" element={underConstruction ? <UnderConstruction /> : <PublicProducts />} />
+                <Route path="/projects" element={underConstruction ? <UnderConstruction /> : <PublicProjects />} />
+                <Route path="/services" element={underConstruction ? <UnderConstruction /> : <Services />} />
+                <Route path="/blog" element={underConstruction ? <UnderConstruction /> : <BlogListing />} />
+                <Route path="/blog/:id" element={underConstruction ? <UnderConstruction /> : <BlogPost />} />
+                <Route path="/products/:id" element={underConstruction ? <UnderConstruction /> : <ProductDetail />} />
+                <Route path="/cart" element={underConstruction ? <UnderConstruction /> : <CartPage />} />
+                <Route path="/order-success" element={underConstruction ? <UnderConstruction /> : <OrderSuccess />} />
+                <Route path="/upload-receipt" element={underConstruction ? <UnderConstruction /> : <UploadReceipt />} />
+                <Route path="/profile" element={underConstruction ? <UnderConstruction /> : <Profile />} />
+                <Route path="/login" element={underConstruction ? <UnderConstruction /> : <Login />} />
+                <Route path="/register" element={underConstruction ? <UnderConstruction /> : <Register />} />
 
                 <Route path="/admin/login" element={<AdminLogin />} />
                 <Route
