@@ -40,7 +40,7 @@ const Brands = () => {
   const fetchBrands = useCallback(async (p = 1, q = '') => {
     try {
       setLoading(true);
-      const response = await api.get(`/admin/brands?page=${p}&q=${encodeURIComponent(q)}`);
+      const response = await api.get(`/admin/brands?page=${p}&q=${encodeURIComponent(q)}&_t=${Date.now()}`);
       setBrands(response.data.brands || []);
       setPagination(response.data.pagination || null);
     } catch (err) {

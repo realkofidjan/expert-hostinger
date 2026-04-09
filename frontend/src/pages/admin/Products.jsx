@@ -65,7 +65,7 @@ const Products = () => {
   const fetchProducts = useCallback(async (p = 1, q = '') => {
     try {
       setLoading(true);
-      const response = await api.get(`/products?page=${p}&q=${encodeURIComponent(q)}&limit=12`);
+      const response = await api.get(`/products?page=${p}&q=${encodeURIComponent(q)}&limit=12&_t=${Date.now()}`);
       setProducts(response.data?.products || []);
       setPagination(response.data?.pagination || null);
     } catch (err) {
@@ -84,7 +84,7 @@ const Products = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get('/categories');
+      const response = await api.get(`/categories?_t=${Date.now()}`);
       setCategories(response.data);
     } catch (err) {
       console.error('Failed to load categories');

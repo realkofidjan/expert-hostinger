@@ -37,7 +37,7 @@ export default function AdminProjects() {
   const fetchProjects = useCallback(async (p = 1, q = '', st = '') => {
     try {
       setLoading(true);
-      const res = await api.get(`/admin/projects?page=${p}&q=${encodeURIComponent(q)}&status=${st}&limit=12`);
+      const res = await api.get(`/admin/projects?page=${p}&q=${encodeURIComponent(q)}&status=${st}&limit=12&_t=${Date.now()}`);
       setProjects(res.data.projects || []);
       setPagination(res.data.pagination || null);
     } catch {

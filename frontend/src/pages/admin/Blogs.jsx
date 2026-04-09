@@ -41,7 +41,7 @@ const Blogs = () => {
   const fetchBlogs = useCallback(async (p = 1, q = '') => {
     try {
       setLoading(true);
-      const response = await api.get(`/blogs?page=${p}&q=${encodeURIComponent(q)}`);
+      const response = await api.get(`/blogs?page=${p}&q=${encodeURIComponent(q)}&_t=${Date.now()}`);
       setBlogs(response.data.blogs || []);
       setPagination(response.data.pagination || null);
     } catch (err) {
@@ -119,7 +119,7 @@ const Blogs = () => {
     setDeletedGalleryIds([]);
     // Fetch gallery
     try {
-      const res = await api.get(`/blogs/${blog.id}`);
+      const res = await api.get(`/blogs/${blog.id}?_t=${Date.now()}`);
       setExistingGallery(res.data?.gallery || []);
     } catch { setExistingGallery([]); }
     setActiveTab('add');
