@@ -12,6 +12,7 @@ import ProductCard from '../components/ProductCard';
 import api from '../api';
 import { useCart } from '../context/CartContext';
 import { useAlert } from '../context/AlertContext';
+import { useWishlist } from '../context/WishlistContext';
 import { decodeId } from '../utils/url';
 
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
@@ -52,6 +53,7 @@ const ProductDetail = () => {
   const { id: rawId } = useParams();
   const { addToCart } = useCart();
   const { showAlert } = useAlert();
+  const { toggleWishlist, isWishlisted } = useWishlist();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
@@ -213,8 +215,11 @@ Could you please provide a formal quote for this?`;
                 <button className="p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
                     <Share2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                 </button>
-                <button className="p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors group">
-                    <Heart className="w-4 h-4 text-gray-600 dark:text-gray-400 group-hover:text-red-500 transition-colors" />
+                <button 
+                    onClick={() => toggleWishlist(product.id)}
+                    className="p-2.5 rounded-xl border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors group"
+                >
+                    <Heart className={`w-4 h-4 group-hover:text-red-500 transition-colors ${isWishlisted(product.id) ? 'text-red-500 fill-current' : 'text-gray-600 dark:text-gray-400'}`} />
                 </button>
             </div>
         </div>

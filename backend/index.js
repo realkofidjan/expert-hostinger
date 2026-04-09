@@ -27,7 +27,8 @@ const SaleController = require('./src/controllers/SaleController');
 const SettingsController = require('./src/controllers/SettingsController');
 const DeliveryController = require('./src/controllers/DeliveryController');
 const AddressController = require('./src/controllers/AddressController');
-const { NotificationController } = require('./src/controllers/NotificationController');
+const NotificationController = require('./src/controllers/NotificationController');
+const WishlistController = require('./src/controllers/WishlistController');
 const ProjectsController = require('./src/controllers/ProjectsController');
 const { exportBackup, restoreBackup } = require('./src/controllers/BackupController');
 
@@ -148,6 +149,11 @@ app.put('/api/admin/delivery-regions/:id', protect, authorize('admin'), Delivery
 // ── User Addresses ────────────────────────────────────────────────────────────
 app.get('/api/my-addresses', protect, AddressController.getMyAddresses);
 app.post('/api/my-addresses', protect, AddressController.saveAddress);
+
+// ── Wishlist ──────────────────────────────────────────────────────────────────
+app.get('/api/wishlist', protect, WishlistController.getWishlist);
+app.post('/api/wishlist/toggle', protect, WishlistController.toggleWishlist);
+app.get('/api/wishlist/check/:productId', protect, WishlistController.checkWishlist);
 app.put('/api/my-addresses/:id', protect, AddressController.updateAddress);
 app.delete('/api/my-addresses/:id', protect, AddressController.deleteAddress);
 

@@ -6,18 +6,21 @@ import {
   MapPin, CheckCircle, Clock, ChevronRight, Edit3,
   X, CreditCard, Truck, Store, Banknote, Smartphone,
   ArrowLeft, Upload, AlertCircle, CalendarDays, MessageSquare,
-  Loader2, ShieldCheck, Trash2
+  Loader2, ShieldCheck, Trash2, Heart
 } from 'lucide-react';
 import ConfirmModal from '../components/admin/ConfirmModal';
 import MainNavbar from '../components/MainNavbar';
 import MainFooter from '../components/MainFooter';
+import ProductCard from '../components/ProductCard';
 import api from '../api';
 import { useAlert } from '../context/AlertContext';
 import { useSocket } from '../context/SocketContext';
+import { useWishlist } from '../context/WishlistContext';
 
 const Profile = () => {
   const { showAlert } = useAlert();
   const socket = useSocket();
+  const { wishlist, loading: loadingWishlist } = useWishlist();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = localStorage.getItem('token');
@@ -250,6 +253,7 @@ const Profile = () => {
     { id: 'details', label: 'Account Details', icon: <User className="w-4 h-4" /> },
     { id: 'orders', label: 'My Orders', icon: <Package className="w-4 h-4" /> },
     { id: 'addresses', label: 'Saved Addresses', icon: <MapPin className="w-4 h-4" /> },
+    { id: 'wishlist', label: 'My Favorites', icon: <Heart className="w-4 h-4" /> },
   ];
 
   const getStatusInfo = (status) => {
@@ -791,6 +795,38 @@ const Profile = () => {
                       </>
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+            {activeTab === 'wishlist' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="bg-white dark:bg-gray-900 rounded-[3rem] p-10 border border-gray-100 dark:border-gray-800 shadow-xl">
+                  <div className="mb-10">
+                    <h2 className="text-3xl font-black text-gray-900 dark:text-white">My Favorites</h2>
+                    <p className="text-sm text-gray-500 mt-1">Curated selection of items you love</p>
+                  </div>
+
+                  {loadingWishlist ? (
+                    <div className="py-20 flex flex-col items-center justify-center gap-4">
+                      <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading Favorites...</p>
+                    </div>
+                  ) : wishlist.length === 0 ? (
+                    <div className="py-24 text-center">
+                      <div className="w-20 h-20 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Heart className="w-10 h-10 text-gray-200" />
+                      </div>
+                      <h3 className="text-xl font-black text-gray-900 dark:text-white mb-2">Your wishlist is empty</h3>
+                      <p className="text-sm text-gray-500 max-w-xs mx-auto mb-8">Tap the heart on any product to save it here for later.</p>
+                      <Link to="/products" className="inline-flex items-center gap-2 px-8 py-3.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl">Explore Collection</Link>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {wishlist.map(product => (
+                        <ProductCard key={product.id} product={product} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

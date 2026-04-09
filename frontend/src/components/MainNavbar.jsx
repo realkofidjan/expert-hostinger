@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Moon, Sun, Menu, X, ChevronRight, LogOut, LayoutDashboard, Phone } from 'lucide-react';
+import { Search, ShoppingCart, User, Moon, Sun, Menu, X, ChevronRight, LogOut, LayoutDashboard, Phone, Heart } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 
 const navLinks = [
   { label: 'Home', href: '/' },
@@ -20,6 +21,7 @@ const MainNavbar = () => {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { cartCount, setIsCartOpen } = useCart();
+  const { wishlist } = useWishlist();
   const userMenuRef = useRef(null);
 
   // Read auth state from localStorage
@@ -144,6 +146,20 @@ const MainNavbar = () => {
               >
                 <Phone size={20} />
               </a>
+
+              {/* Wishlist */}
+              <Link
+                to="/profile?tab=wishlist"
+                className={`${dynamicIconClass} relative`}
+                title="My Favorites"
+              >
+                <Heart size={20} className={wishlist.length > 0 ? "text-red-500 fill-red-500/20" : ""} />
+                {wishlist.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                    {wishlist.length > 9 ? '9+' : wishlist.length}
+                  </span>
+                )}
+              </Link>
 
               {/* Cart */}
               <button className={`${dynamicIconClass} relative`} onClick={() => setIsCartOpen(true)} aria-label="Open cart">

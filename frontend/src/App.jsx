@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { CartProvider } from './context/CartContext';
 import { AlertProvider } from './context/AlertContext';
 import { SocketProvider } from './context/SocketContext';
+import { WishlistProvider } from './context/WishlistContext';
 import CartSidebar from './components/CartSidebar';
 import PageLoader from './components/PageLoader';
 import Home from './pages/Home';
@@ -96,56 +97,58 @@ function App() {
     <ThemeProvider>
       <SocketProvider>
         <AlertProvider>
-          <CartProvider>
-            {loading && <PageLoader onDone={() => setLoading(false)} />}
-            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <ScrollToTop />
-              <RouteLoader />
-              <CartSidebar />
-              <Routes>
-                {/* ... existing routes ... */}
-                <Route path="/" element={underConstruction ? <UnderConstruction /> : <Home />} />
-                <Route path="/products" element={underConstruction ? <UnderConstruction /> : <PublicProducts />} />
-                <Route path="/projects" element={underConstruction ? <UnderConstruction /> : <PublicProjects />} />
-                <Route path="/services" element={underConstruction ? <UnderConstruction /> : <Services />} />
-                <Route path="/blog" element={underConstruction ? <UnderConstruction /> : <BlogListing />} />
-                <Route path="/blog/:id" element={underConstruction ? <UnderConstruction /> : <BlogPost />} />
-                <Route path="/products/:id" element={underConstruction ? <UnderConstruction /> : <ProductDetail />} />
-                <Route path="/cart" element={underConstruction ? <UnderConstruction /> : <CartPage />} />
-                <Route path="/order-success" element={underConstruction ? <UnderConstruction /> : <OrderSuccess />} />
-                <Route path="/upload-receipt" element={underConstruction ? <UnderConstruction /> : <UploadReceipt />} />
-                <Route path="/profile" element={underConstruction ? <UnderConstruction /> : <Profile />} />
-                <Route path="/login" element={underConstruction ? <UnderConstruction /> : <Login />} />
-                <Route path="/register" element={underConstruction ? <UnderConstruction /> : <Register />} />
+          <WishlistProvider>
+            <CartProvider>
+              {loading && <PageLoader onDone={() => setLoading(false)} />}
+              <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <ScrollToTop />
+                <RouteLoader />
+                <CartSidebar />
+                <Routes>
+                  {/* ... routes ... */}
+                  <Route path="/" element={underConstruction ? <UnderConstruction /> : <Home />} />
+                  <Route path="/products" element={underConstruction ? <UnderConstruction /> : <PublicProducts />} />
+                  <Route path="/projects" element={underConstruction ? <UnderConstruction /> : <PublicProjects />} />
+                  <Route path="/services" element={underConstruction ? <UnderConstruction /> : <Services />} />
+                  <Route path="/blog" element={underConstruction ? <UnderConstruction /> : <BlogListing />} />
+                  <Route path="/blog/:id" element={underConstruction ? <UnderConstruction /> : <BlogPost />} />
+                  <Route path="/products/:id" element={underConstruction ? <UnderConstruction /> : <ProductDetail />} />
+                  <Route path="/cart" element={underConstruction ? <UnderConstruction /> : <CartPage />} />
+                  <Route path="/order-success" element={underConstruction ? <UnderConstruction /> : <OrderSuccess />} />
+                  <Route path="/upload-receipt" element={underConstruction ? <UnderConstruction /> : <UploadReceipt />} />
+                  <Route path="/profile" element={underConstruction ? <UnderConstruction /> : <Profile />} />
+                  <Route path="/login" element={underConstruction ? <UnderConstruction /> : <Login />} />
+                  <Route path="/register" element={underConstruction ? <UnderConstruction /> : <Register />} />
 
-                <Route path="/admin/login" element={<AdminLogin />} />
-                <Route
-                  path="/admin/*"
-                  element={
-                    <ProtectedRoute>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="categories" element={<Categories />} />
-                        <Route path="brands" element={<Brands />} />
-                        <Route path="products" element={<Products />} />
-                        <Route path="discounts" element={<Discounts />} />
-                        <Route path="orders" element={<Orders />} />
-                        <Route path="inquiries" element={<Inquiries />} />
-                        <Route path="users" element={<Users />} />
-                        <Route path="blogs" element={<Blogs />} />
-                        <Route path="projects" element={<AdminProjects />} />
-                        <Route path="logs" element={<Logs />} />
-                        <Route path="settings" element={<AdminSettings />} />
-                        <Route path="*" element={<Navigate to="/admin" replace />} />
-                      </Routes>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-              <ConditionalWhatsAppButton />
-            </Router>
-          </CartProvider>
+                  <Route path="/admin/login" element={<AdminLogin />} />
+                  <Route
+                    path="/admin/*"
+                    element={
+                      <ProtectedRoute>
+                        <Routes>
+                          <Route path="/" element={<Dashboard />} />
+                          <Route path="categories" element={<Categories />} />
+                          <Route path="brands" element={<Brands />} />
+                          <Route path="products" element={<Products />} />
+                          <Route path="discounts" element={<Discounts />} />
+                          <Route path="orders" element={<Orders />} />
+                          <Route path="inquiries" element={<Inquiries />} />
+                          <Route path="users" element={<Users />} />
+                          <Route path="blogs" element={<Blogs />} />
+                          <Route path="projects" element={<AdminProjects />} />
+                          <Route path="logs" element={<Logs />} />
+                          <Route path="settings" element={<AdminSettings />} />
+                          <Route path="*" element={<Navigate to="/admin" replace />} />
+                        </Routes>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+                <ConditionalWhatsAppButton />
+              </Router>
+            </CartProvider>
+          </WishlistProvider>
         </AlertProvider>
       </SocketProvider>
     </ThemeProvider>

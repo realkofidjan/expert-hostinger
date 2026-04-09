@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Eye, Star, ArrowRight } from 'lucide-react';
+import { ShoppingBag, Eye, Star, ArrowRight, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import { createProductUrl } from '../utils/url';
 
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
@@ -26,6 +27,8 @@ const getColorCode = (name) => {
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
+  const { toggleWishlist, isWishlisted } = useWishlist();
+  const activeWishlisted = isWishlisted(product.id);
   const img = product.primary_image ? `${BACKEND_URL}${product.primary_image}` : null;
   const productUrl = createProductUrl(product);
 
@@ -58,6 +61,21 @@ const ProductCard = ({ product }) => {
             <span className="text-4xl">🪑</span>
           </div>
         )}
+        
+        {/* Wishlist Button */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            toggleWishlist(product.id);
+          }}
+          className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md transition-all duration-300 z-10 shadow-lg ${
+            activeWishlisted 
+              ? 'bg-red-500 text-white translate-y-0 opacity-100' 
+              : 'bg-white/80 text-gray-400 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2 hover:text-red-500 hover:bg-white'
+          }`}
+        >
+          <Heart className={`w-4 h-4 ${activeWishlisted ? 'fill-current' : ''}`} />
+        </button>
 
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
@@ -76,7 +94,7 @@ const ProductCard = ({ product }) => {
           </div>
         )}
         {product.variants?.length > 0 && (
-          <div className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow">
+          <div className="absolute top-12 right-3 bg-green-500/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow">
             {product.variants.length} Colors
           </div>
         )}
