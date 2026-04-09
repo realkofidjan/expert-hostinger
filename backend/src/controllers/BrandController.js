@@ -24,6 +24,7 @@ const getAllBrands = async (req, res) => {
 };
 
 const { getAssetPath } = require('../utils/imageHandler');
+const { optimizeImage } = require('../utils/imageOptimizer');
 const fs = require('fs');
 const path = require('path');
 
@@ -38,7 +39,8 @@ const createBrand = async (req, res) => {
         if (req.file) {
             const { relativeDir, absoluteDir } = getAssetPath('brands');
             const filename = `${Date.now()}-${req.file.originalname.replace(/\s+/g, '_')}`;
-            fs.writeFileSync(path.join(absoluteDir, filename), req.file.buffer);
+            const absolutePath = path.join(absoluteDir, filename);
+            await optimizeImage(req.file.buffer, absolutePath);
             logoPath = `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
         }
 
@@ -94,7 +96,8 @@ const updateBrand = async (req, res) => {
         if (req.file) {
             const { relativeDir, absoluteDir } = getAssetPath('brands');
             const filename = `${Date.now()}-${req.file.originalname.replace(/\s+/g, '_')}`;
-            fs.writeFileSync(path.join(absoluteDir, filename), req.file.buffer);
+            const absolutePath = path.join(absoluteDir, filename);
+            await optimizeImage(req.file.buffer, absolutePath);
             logoPath = `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
         }
 

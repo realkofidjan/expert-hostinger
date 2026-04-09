@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const XLSX = require('xlsx');
 const { getAssetPath } = require('../utils/imageHandler');
+const { optimizeImage } = require('../utils/imageOptimizer');
 
 /**
  * @desc    Get all products
@@ -136,7 +137,7 @@ const createProduct = async (req, res) => {
                 const absolutePath = path.join(absoluteDir, filename);
                 const relativePath = `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
 
-                fs.writeFileSync(absolutePath, file.buffer);
+                await optimizeImage(file.buffer, absolutePath);
                 // Set first image as primary by default
                 imageRecords.push({ url: relativePath, is_primary: i === 0 ? 1 : 0 });
             }
@@ -220,7 +221,7 @@ const updateProduct = async (req, res) => {
                 const absolutePath = path.join(absoluteDir, filename);
                 const relativePath = `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
 
-                fs.writeFileSync(absolutePath, file.buffer);
+                await optimizeImage(file.buffer, absolutePath);
                 imageRecords.push({ url: relativePath, is_primary: i === 0 ? 1 : 0 });
             }
 

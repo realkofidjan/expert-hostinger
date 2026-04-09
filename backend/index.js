@@ -54,20 +54,15 @@ const receiptUpload = multer({
 });
 
 const app = express();
-const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+const API_BASE_URL = process.env.VITE_API_BASE_URL || '/api';
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://100.102.175.73:5173',
-];
 app.use(cors({
   origin: (origin, callback) => {
-    // allow requests with no origin (mobile apps, Postman, curl)
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS: origin ${origin} not allowed`));
+    // In production/monolithic mode, we allow the origin if it exists, or true for same-origin
+    if (!origin) return callback(null, true);
+    callback(null, true); // Simple and robust for deployment
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -79,12 +74,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 // Serve Static Files
+const frontendBuildPath = path.join(__dirname, 'public');
+app.use(express.static(frontendBuildPath));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
-
-app.get('/', (req, res) => {
-  res.json({ message: 'Expert Office Furnish API v2.0' });
-});
 
 // ── Auth & User ───────────────────────────────────────────────────────────────
 app.post('/api/auth/register', AuthController.register);
@@ -214,6 +207,27 @@ app.get('/api/bulk-upload/count', protect, authorize('admin', 'sub-admin'), Bulk
 app.post('/api/admin/bulk-upload/validate', protect, authorize('admin', 'sub-admin'), upload.single('file'), BulkUploadController.validateUpload);
 app.post('/api/admin/bulk-upload/confirm', protect, authorize('admin', 'sub-admin'), BulkUploadController.confirmUpload);
 
+// ── Error Handler ─────────────────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+  console.error('SERVER_ERROR:', err);
+  res.status(500).json({ error: 'Something went wrong', details: err.message });
+});
+
+// ── Catch-all for Frontend (SPA) ─────────────────────────────────────────────
+// Robust catch-all using app.use() to avoid Express 5 path-to-regexp issues
+app.use((req, res) => {
+  // If request is for an API route that wasn't found, send 404
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API route not found' });
+  }
+
+  const indexPath = path.join(frontendBuildPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.json({ message: 'Expert Office Furnish API v2.0', note: 'Frontend build not found' });
+  }
+});
 const db = require('./src/config/db');
 (async () => {
   try {

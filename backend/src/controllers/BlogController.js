@@ -1,5 +1,6 @@
 const Blog = require('../models/Blog');
 const { getAssetPath } = require('../utils/imageHandler');
+const { optimizeImage } = require('../utils/imageOptimizer');
 const fs = require('fs');
 const path = require('path');
 const db = require('../config/db');
@@ -22,10 +23,11 @@ const db = require('../config/db');
 })();
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const saveFile = (file, subdir = '') => {
+const saveFile = async (file, subdir = '') => {
     const { relativeDir, absoluteDir } = getAssetPath('content', subdir);
     const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
-    fs.writeFileSync(path.join(absoluteDir, filename), file.buffer);
+    const absolutePath = path.join(absoluteDir, filename);
+    await optimizeImage(file.buffer, absolutePath);
     return `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
 };
 
@@ -99,7 +101,7 @@ const createBlog = async (req, res) => {
         // Cover image
         let imagePath = null;
         const coverFile = req.files?.['image']?.[0];
-        if (coverFile) imagePath = saveFile(coverFile);
+        if (coverFile) imagePath = await saveFile(coverFile);
 
         const blogId = await Blog.create({
             title, slug, content, excerpt,
@@ -111,7 +113,7 @@ const createBlog = async (req, res) => {
         // Gallery images
         const galleryFiles = req.files?.['gallery'] || [];
         for (let i = 0; i < galleryFiles.length; i++) {
-            const url = saveFile(galleryFiles[i], `blog-${blogId}`);
+            const url = await saveFile(galleryFiles[i], `blog-${blogId}`);
             await db.query(
                 'INSERT INTO blog_images (blog_id, image_url, sort_order) VALUES (?, ?, ?)',
                 [blogId, url, i]
@@ -143,7 +145,7 @@ const updateBlog = async (req, res) => {
         // Cover image
         let imagePath = blog.image_url;
         const coverFile = req.files?.['image']?.[0];
-        if (coverFile) imagePath = saveFile(coverFile);
+        if (coverFile) imagePath = await saveFile(coverFile);
 
         await Blog.update(id, {
             title: title || blog.title,
@@ -177,7 +179,7 @@ const updateBlog = async (req, res) => {
             );
             let nextOrder = maxOrder + 1;
             for (const file of galleryFiles) {
-                const url = saveFile(file, `blog-${id}`);
+                const url = await saveFile(file, `blog-${id}`);
                 await db.query(
                     'INSERT INTO blog_images (blog_id, image_url, sort_order) VALUES (?, ?, ?)',
                     [id, url, nextOrder++]
