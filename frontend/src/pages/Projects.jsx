@@ -146,8 +146,8 @@ export default function Projects() {
           {activeProject.description && (
             <p
               key={activeProject.id + '-desc'}
-              className="text-slate-300 text-sm md:text-base leading-relaxed line-clamp-2 mb-5 max-w-xl"
-              style={{ animation: 'fadeSlideUp 0.5s 0.08s ease-out both' }}
+              className="text-slate-200 text-base md:text-lg leading-relaxed mb-6 max-w-2xl drop-shadow-lg"
+              style={{ animation: 'fadeSlideUp 0.6s 0.1s ease-out both' }}
             >
               {activeProject.description}
             </p>
