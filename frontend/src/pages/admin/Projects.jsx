@@ -9,7 +9,7 @@ import {
   Upload, X, Star, MapPin, User, Calendar, Loader2, Globe, Images
 } from 'lucide-react';
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
+import { getImageUrl } from '../../utils/url';
 
 const emptyForm = { title: '', description: '', client: '', location: '', year: '', status: 'draft' };
 
@@ -174,13 +174,13 @@ export default function AdminProjects() {
 
   const allPreviewImages = [
     ...existingImages.map(img => ({
-      src: img.image_url.startsWith('http') ? img.image_url : `${BACKEND_URL}${img.image_url}`,
+      src: getImageUrl(img.image_url),
       label: 'saved'
     })),
     ...newPreviews.map(src => ({ src, label: 'new' })),
   ];
 
-  const imgUrl = (url) => (!url ? '' : url.startsWith('http') ? url : `${BACKEND_URL}${url}`);
+  const imgUrl = (url) => getImageUrl(url);
 
   return (
     <AdminLayout>

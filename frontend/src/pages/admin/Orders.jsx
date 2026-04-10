@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
+import { getImageUrl } from '../../utils/url';
 
 const STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'on_route', 'delivered', 'cancelled'];
 
@@ -58,12 +58,7 @@ const get72hStatus = (createdAt) => {
   return { expired: false, label: `${hours}h ${minutes}m left`, hours, minutes };
 };
 
-const getImageUrl = (path) => {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `${BACKEND_URL}${cleanPath}`;
-};
+const getImageUrlUtil = (path) => getImageUrl(path);
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);

@@ -5,8 +5,9 @@ import api from '../api';
 import { MapPin, User, Calendar, FolderOpen } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
-const imgUrl = (url) => (!url ? '' : url.startsWith('http') ? url : `${BACKEND_URL}${url}`);
+import { getImageUrl } from '../utils/url';
+
+const imgUrl = (url) => getImageUrl(url);
 
 const getAllImages = (project) => {
   if (!project) return [];
