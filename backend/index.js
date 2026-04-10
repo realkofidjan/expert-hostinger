@@ -291,6 +291,22 @@ const db = require('./src/config/db');
       console.log('Migration: added signature column to users');
     }
 
+    const [subcatsExist] = await db.query("SHOW TABLES LIKE 'subcategories'");
+    if (subcatsExist.length === 0) {
+        await db.query(`
+            CREATE TABLE subcategories (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                category_id INT NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                slug VARCHAR(255) NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `);
+        console.log('Migration: added subcategories table');
+    }
+
     const [proformaExist] = await db.query("SHOW TABLES LIKE 'proforma_invoices'");
     if (proformaExist.length === 0) {
         await db.query(`
