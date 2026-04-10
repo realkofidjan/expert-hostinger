@@ -1,7 +1,7 @@
 {
   "scripts": {
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
-    "build:frontend": "cd frontend && npm run build",
+    "build:frontend": "cd frontend && npm install --include=dev && npm run build",
     "build": "npm run deploy:prep",
     "deploy:prep": "npm run build:frontend && rm -rf backend/public && mkdir -p backend/public && cp -r frontend/dist/* backend/public/",
     "start": "cd backend && node index.js",
