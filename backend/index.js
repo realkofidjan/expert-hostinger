@@ -281,6 +281,33 @@ const db = require('./src/config/db');
       await db.query('ALTER TABLE orders ADD COLUMN delivery_notes TEXT NULL');
       console.log('Migration: added delivery_notes');
     }
+
+    const [proformaExist] = await db.query("SHOW TABLES LIKE 'proforma_invoices'");
+    if (proformaExist.length === 0) {
+        await db.query(`
+            CREATE TABLE proforma_invoices (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                invoice_number VARCHAR(100) NOT NULL UNIQUE,
+                client_name VARCHAR(255) NOT NULL,
+                client_address TEXT,
+                client_email VARCHAR(255),
+                items JSON NOT NULL,
+                subtotal DECIMAL(10,2) DEFAULT 0.00,
+                vat_percentage DECIMAL(5,2) DEFAULT 0.00,
+                vat_amount DECIMAL(10,2) DEFAULT 0.00,
+                grand_total DECIMAL(10,2) DEFAULT 0.00,
+                warranty VARCHAR(255),
+                delivery_terms VARCHAR(255),
+                payment_terms VARCHAR(255),
+                validity_days VARCHAR(100),
+                created_by INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        `);
+        console.log('Migration: added proforma_invoices table');
+    }
   } catch (e) {
     console.warn('Migration error:', e.message);
   }
