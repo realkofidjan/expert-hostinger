@@ -282,6 +282,15 @@ const db = require('./src/config/db');
       console.log('Migration: added delivery_notes');
     }
 
+    const [userCols] = await db.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'"
+    );
+    const existingUserCols = userCols.map(c => c.COLUMN_NAME);
+    if (!existingUserCols.includes('signature')) {
+      await db.query('ALTER TABLE users ADD COLUMN signature VARCHAR(255) NULL');
+      console.log('Migration: added signature column to users');
+    }
+
     const [proformaExist] = await db.query("SHOW TABLES LIKE 'proforma_invoices'");
     if (proformaExist.length === 0) {
         await db.query(`
