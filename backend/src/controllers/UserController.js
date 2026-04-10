@@ -191,6 +191,19 @@ const updateProfile = async (req, res) => {
     try {
         const { full_name, phone } = req.body;
         const id = req.user.id;
+        let signature = req.body.signature;
+
+        // If a file was uploaded, update the signature path
+        if (req.file) {
+            signature = `/uploads/signatures/${req.file.filename}`;
+            
+            // Optional: delete old signature file if it exists
+            const [oldUser] = await db.query('SELECT signature FROM users WHERE id = ?', [id]);
+            if (oldUser && oldUser[0] && oldUser[0].signature) {
+                const oldPath = path.join(__dirname, '../..', oldUser[0].signature);
+                if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+            }
+        }
 
         // Fetch current user data to preserve role and status
         const [user] = await db.query('SELECT role, status, email FROM users WHERE id = ?', [id]);
@@ -201,6 +214,7 @@ const updateProfile = async (req, res) => {
         await User.update(id, {
             full_name,
             phone,
+            signature: signature || null,
             role: user[0].role,
             status: user[0].status,
             email: user[0].email

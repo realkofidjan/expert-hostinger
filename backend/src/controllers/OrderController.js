@@ -587,6 +587,138 @@ const OrderController = {
       console.error('PREVIEW_RECEIPT_ERROR:', err);
       res.status(500).json({ error: err.message });
     }
+  },
+
+  downloadReceipt: async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [orders] = await db.query('SELECT * FROM orders WHERE id = ?', [id]);
+      if (!orders.length) return res.status(404).json({ error: 'Order not found' });
+
+      const [items] = await db.query(`
+        SELECT oi.*, p.name AS product_name, p.sku
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+      `, [id]);
+
+      const [settings] = await db.query(
+        "SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('store_address','bank_name','bank_branch','bank_account_number','bank_account_name','pickup_address')"
+      );
+      const cfg = Object.fromEntries(settings.map(s => [s.setting_key, s.setting_value]));
+      const order = orders[0];
+      const docType = order.payment_method === 'cash' ? 'Invoice' : 'Receipt';
+      const receiptHtml = buildReceiptHtml(order, items, cfg, docType);
+      
+      const pdfBuffer = await generatePdf(receiptHtml);
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=${docType}_${order.order_number}.pdf`);
+      res.send(pdfBuffer);
+    } catch (err) {
+      console.error('DOWNLOAD_RECEIPT_ERROR:', err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  updateOrder: async (req, res) => {
+    const { id } = req.params;
+    const body = req.body;
+    const { items, customer_name, customer_email, customer_phone, delivery_mode, region, delivery_fee, shipping_address, status, payment_status } = body;
+
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+    try {
+      // 1. Restore stock for existing items before updating
+      const [oldItems] = await connection.query('SELECT * FROM order_items WHERE order_id = ?', [id]);
+      for (const item of oldItems) {
+        if (item.variant_id) {
+          await connection.query('UPDATE product_variants SET stock_quantity = stock_quantity + ? WHERE id = ?', [item.quantity, item.variant_id]);
+        }
+        await connection.query('UPDATE products SET stock = stock + ? WHERE id = ?', [item.quantity, item.product_id]);
+      }
+
+      // 2. Delete existing items
+      await connection.query('DELETE FROM order_items WHERE order_id = ?', [id]);
+
+      // 3. insert new items and deduct stock
+      let subtotal = 0;
+      for (const item of items) {
+        const qty = parseInt(item.quantity);
+        const price = parseFloat(item.unit_price);
+        subtotal += (qty * price);
+
+        let variantId = item.variant_id || null;
+        if (item.color && !variantId) {
+            // Find variant ID if only color name is provided
+            const [variants] = await connection.query(
+                'SELECT id FROM product_variants WHERE product_id = ? AND color_name = ?',
+                [item.product_id, item.color]
+            );
+            if (variants.length > 0) variantId = variants[0].id;
+        }
+
+        // Check stock
+        let stockAvailable = 0;
+        if (variantId) {
+            const [vs] = await connection.query('SELECT stock_quantity FROM product_variants WHERE id = ?', [variantId]);
+            stockAvailable = vs[0]?.stock_quantity || 0;
+        } else {
+            const [ps] = await connection.query('SELECT stock FROM products WHERE id = ?', [item.product_id]);
+            stockAvailable = ps[0]?.stock || 0;
+        }
+
+        if (stockAvailable < qty) {
+            throw new Error(`Insufficient stock for ${item.product_name || 'Item'}. Available: ${stockAvailable}`);
+        }
+
+        // Deduct stock
+        if (variantId) {
+            await connection.query('UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ?', [qty, variantId]);
+        }
+        await connection.query('UPDATE products SET stock = stock - ? WHERE id = ?', [qty, item.product_id]);
+
+        // Insert item
+        await connection.query(`
+          INSERT INTO order_items (order_id, product_id, variant_id, color, quantity, unit_price, subtotal)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [id, item.product_id, variantId, item.color || null, qty, price, qty * price]);
+      }
+
+      // 4. Update order details
+      const fee = parseFloat(delivery_fee || 0);
+      const total = subtotal + fee;
+
+      await connection.query(`
+        UPDATE orders SET
+          customer_name = ?, customer_email = ?, customer_phone = ?,
+          delivery_mode = ?, region = ?, delivery_fee = ?, subtotal = ?, total_amount = ?,
+          shipping_address = ?, status = ?, payment_status = ?, updated_at = NOW()
+        WHERE id = ?
+      `, [
+        customer_name, customer_email, customer_phone || null,
+        delivery_mode || 'pickup', region || null, fee, subtotal, total,
+        typeof shipping_address === 'object' ? JSON.stringify(shipping_address) : shipping_address,
+        status || 'pending', payment_status || 'pending',
+        id
+      ]);
+
+      await connection.commit();
+
+      // Log activity
+      await db.query(
+          'INSERT INTO activity_logs (user_id, action, context) VALUES (?, ?, ?)',
+          [req.user.id, 'UPDATE_ORDER_FULL', `Order #${id} full update by admin`]
+      );
+
+      res.json({ message: 'Order updated successfully' });
+    } catch (err) {
+      await connection.rollback();
+      console.error('UPDATE_ORDER_FULL_ERROR:', err);
+      res.status(500).json({ error: err.message });
+    } finally {
+      connection.release();
+    }
   }
 };
 

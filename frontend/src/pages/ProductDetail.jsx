@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, ShoppingBag, Tag, ChevronLeft, ChevronRight, CheckCircle,
   Truck, ShieldCheck, Headphones, Star, Minus, Plus, Share2, Heart,
-  Info, LayoutGrid, FileText, MessageSquare, BadgeCheck
+  Info, LayoutGrid, FileText, MessageSquare, BadgeCheck, Package
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainNavbar from '../components/MainNavbar';
@@ -485,15 +485,24 @@ Could you please provide a formal quote for this?`;
                         <div className="flex gap-4 mb-8">
                             <Truck className="text-green-600" />
                             <div>
-                                <h4 className="font-black mb-2">Delivery</h4>
-                                <p className="text-sm text-gray-500">Express shipping to Accra (24h) and National delivery (2-4 days).</p>
+                                <h4 className="font-black mb-2 uppercase tracking-widest text-[11px]">Delivery Policy</h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 font-bold uppercase">IMMEDIATE</p>
+                                <p className="text-xs text-gray-500 mt-1">We maintain a high-inventory standard to ensure your workspace is transformed without delay.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4 mb-8">
+                            <ShieldCheck className="text-blue-600" />
+                            <div>
+                                <h4 className="font-black mb-2 uppercase tracking-widest text-[11px]">Returns & Installation</h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 font-bold uppercase transition-colors">All goods are considered accepted once installed and cannot be returned afterwards.</p>
                             </div>
                         </div>
                         <div className="flex gap-4">
-                            <ShieldCheck className="text-blue-600" />
+                            <BadgeCheck className="text-purple-600" />
                             <div>
-                                <h4 className="font-black mb-2">Returns</h4>
-                                <p className="text-sm text-gray-500">7-day hassle-free return policy for unused items in original boxes.</p>
+                                <h4 className="font-black mb-2 uppercase tracking-widest text-[11px]">Official Warranty</h4>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 font-bold uppercase">3 YEARS</p>
+                                <p className="text-xs text-gray-500 mt-1">Our products are engineered for longevity, backed by a comprehensive 3-year structural warranty.</p>
                             </div>
                         </div>
                     </div>

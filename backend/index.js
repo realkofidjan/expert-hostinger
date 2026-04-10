@@ -30,6 +30,7 @@ const AddressController = require('./src/controllers/AddressController');
 const { NotificationController } = require('./src/controllers/NotificationController');
 const WishlistController = require('./src/controllers/WishlistController');
 const ProjectsController = require('./src/controllers/ProjectsController');
+const ProformaController = require('./src/controllers/ProformaController');
 const { exportBackup, restoreBackup } = require('./src/controllers/BackupController');
 
 // ── Multer: in-memory for images, disk for receipts ──────────────────────────
@@ -56,6 +57,21 @@ const receiptUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 });
 
+const signatureDir = path.join(__dirname, 'uploads', 'signatures');
+if (!fs.existsSync(signatureDir)) fs.mkdirSync(signatureDir, { recursive: true });
+
+const signatureStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, signatureDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `sig-${req.user.id}-${Date.now()}${ext}`);
+  }
+});
+const signatureUpload = multer({
+  storage: signatureStorage,
+  limits: { fileSize: 2 * 1024 * 1024 }
+});
+
 const app = express();
 const API_BASE_URL = process.env.VITE_API_BASE_URL || '/api';
 const PORT = process.env.PORT || 5000;
@@ -72,8 +88,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 app.use(morgan('dev'));
 app.use(underConstruction);
 
@@ -87,7 +103,7 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.post('/api/auth/register', AuthController.register);
 app.post('/api/auth/login', AuthController.login);
 app.get('/api/auth/me', protect, AuthController.getMe);
-app.put('/api/auth/profile', protect, UserController.updateProfile);
+app.put('/api/auth/profile', protect, signatureUpload.single('signature'), UserController.updateProfile);
 app.get('/api/auth/users', protect, authorize('admin'), UserController.getAllUsers);
 app.put('/api/admin/users/:id', protect, authorize('admin'), UserController.updateUser);
 app.delete('/api/admin/users/:id', protect, authorize('admin'), UserController.deleteUser);
@@ -198,6 +214,15 @@ app.patch('/api/admin/discounts/:id/toggle', protect, authorize('admin'), Discou
 app.delete('/api/admin/discounts/:id', protect, authorize('admin'), DiscountController.remove);
 
 // ── Sales ─────────────────────────────────────────────────────────────────────
+app.get('/api/admin/sales', protect, authorize('admin', 'sub-admin', 'staff'), SaleController.getAll);
+app.post('/api/admin/sales', protect, authorize('admin', 'sub-admin'), SaleController.create);
+
+// ── Proforma ──────────────────────────────────────────────────────────────────
+app.get('/api/admin/proforma', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.getAll);
+app.post('/api/admin/proforma', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.create);
+app.post('/api/admin/proforma/:id/send', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.sendByEmail);
+app.get('/api/admin/proforma/:id/download', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.downloadPdf);
+app.delete('/api/admin/proforma/:id', protect, authorize('admin', 'sub-admin'), ProformaController.delete);
 app.get('/api/admin/sales', protect, authorize('admin', 'sub-admin', 'staff'), SaleController.getAll);
 app.post('/api/admin/sales', protect, authorize('admin'), SaleController.create);
 app.put('/api/admin/sales/:id', protect, authorize('admin'), SaleController.update);

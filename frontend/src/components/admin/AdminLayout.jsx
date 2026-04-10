@@ -176,6 +176,7 @@ const AdminLayout = ({ children }) => {
     { name: 'Products',           icon: <Package size={20} />,         path: '/admin/products' },
     { name: 'Discounts & Coupons',icon: <Tag size={20} />,             path: '/admin/discounts',  permission: 'manageDiscounts' },
     { name: 'Orders',             icon: <ShoppingCart size={20} />,    path: '/admin/orders' },
+    { name: 'Proforma',           icon: <ClipboardCheck size={20} />,  path: '/admin/proforma' },
     { name: 'Inquiries',          icon: <MessageSquare size={20} />,   path: '/admin/inquiries' },
     { name: 'Content',            icon: <FileText size={20} />,        path: '/admin/blogs',      permission: 'manageContent' },
     { name: 'Projects',           icon: <FolderOpen size={20} />,      path: '/admin/projects',   permission: 'manageContent' },

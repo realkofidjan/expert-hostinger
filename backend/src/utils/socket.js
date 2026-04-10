@@ -5,7 +5,7 @@ let io;
 const init = (server) => {
   io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: true,
       methods: ["GET", "POST"],
       credentials: true
     },

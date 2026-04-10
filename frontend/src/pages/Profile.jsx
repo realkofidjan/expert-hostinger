@@ -17,6 +17,8 @@ import { useAlert } from '../context/AlertContext';
 import { useSocket } from '../context/SocketContext';
 import { useWishlist } from '../context/WishlistContext';
 
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
+
 const Profile = () => {
   const { showAlert } = useAlert();
   const socket = useSocket();
@@ -29,6 +31,8 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ full_name: '', phone: '' });
   const [saving, setSaving] = useState(false);
+  const [signatureFile, setSignatureFile] = useState(null);
+  const [signaturePreview, setSignaturePreview] = useState(user?.signature ? `${BACKEND_URL}${user.signature}` : null);
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -202,10 +206,23 @@ const Profile = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await api.put('/auth/profile', editForm);
+      const formData = new FormData();
+      formData.append('full_name', editForm.full_name);
+      formData.append('phone', editForm.phone);
+      if (signatureFile) {
+        formData.append('signature', signatureFile);
+      }
+
+      const res = await api.put('/auth/profile', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       setUser(res.data.user);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       setIsEditing(false);
+      setSignatureFile(null);
+      if (res.data.user.signature) {
+        setSignaturePreview(`${BACKEND_URL}${res.data.user.signature}`);
+      }
       showAlert('success', 'Profile Updated', 'Your identity details have been archived successfully.');
     } catch (err) {
       showAlert('error', 'Profile Error', err.response?.data?.error || 'Failed to update profile');
@@ -365,6 +382,46 @@ const Profile = () => {
                           />
                         </div>
                       </div>
+                      
+                      {['admin', 'staff', 'sub-admin'].includes(user.role?.toLowerCase()) && (
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Digital Signature (For Proforma Invoices)</label>
+                          <div className="flex flex-col md:flex-row gap-6 items-start">
+                            <div className="w-full md:w-64 aspect-[3/1] bg-gray-50 dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center overflow-hidden relative group">
+                              {signaturePreview ? (
+                                <img src={signaturePreview} alt="Signature" className="w-full h-full object-contain p-4" />
+                              ) : (
+                                <div className="text-center p-4">
+                                  <ShieldCheck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">No Signature Set</p>
+                                </div>
+                              )}
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                onChange={(e) => {
+                                  if (e.target.files?.[0]) {
+                                    setSignatureFile(e.target.files[0]);
+                                    setSignaturePreview(URL.createObjectURL(e.target.files[0]));
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                                Upload your professional signature to be included in all proforma invoices you generate. Use a PNG with a transparent background for the best look.
+                              </p>
+                              {signatureFile && (
+                                <span className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-[10px] font-black uppercase tracking-widest rounded-full">
+                                  <CheckCircle size={10} /> {signatureFile.name} staged
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex gap-4 pt-4">
                         <button type="submit" disabled={saving} className="px-8 py-4 bg-green-600 text-white rounded-2xl font-black text-sm hover:shadow-xl transition-all shadow-green-500/20">
                           {saving ? 'Saving...' : 'Save Changes'}
@@ -384,12 +441,29 @@ const Profile = () => {
                           <div className="w-12 h-12 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center text-green-600 shadow-sm border border-gray-100 dark:border-gray-700">
                             {React.cloneElement(item.icon, { size: 20 })}
                           </div>
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">{item.label}</p>
-                            <p className="font-extrabold text-gray-900 dark:text-white truncate max-w-[180px]">{item.value}</p>
+                            <p className="font-extrabold text-gray-900 dark:text-white truncate">{item.value}</p>
                           </div>
                         </div>
                       ))}
+                      {['admin', 'staff', 'sub-admin'].includes(user.role?.toLowerCase()) && (
+                        <div className="p-6 bg-gray-50 dark:bg-gray-800/40 rounded-[2rem] flex items-center gap-6 md:col-span-2">
+                          <div className="w-12 h-12 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700 shrink-0">
+                            <ShieldCheck size={20} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Official Digital Signature</p>
+                            {user.signature ? (
+                              <div className="h-12 bg-white dark:bg-gray-900 rounded-xl p-2 border border-gray-100 dark:border-gray-800 inline-block">
+                                <img src={`${BACKEND_URL}${user.signature}`} alt="Digital Signature" className="h-full w-auto object-contain" />
+                              </div>
+                            ) : (
+                              <p className="text-xs font-bold text-gray-400 italic">No signature saved. Edit profile to upload.</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
