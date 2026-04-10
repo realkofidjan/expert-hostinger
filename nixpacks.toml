@@ -2,9 +2,12 @@
 aptPkgs = [
   "ca-certificates",
   "fonts-liberation",
+  "gconf-service",
+  "libappindicator1",
   "libasound2",
   "libatk1.0-0",
   "libatk-bridge2.0-0",
+  "libatomic1",
   "libc6",
   "libcairo2",
   "libcups2",
@@ -37,7 +40,8 @@ aptPkgs = [
   "libxtst6",
   "lsb-release",
   "wget",
-  "xdg-utils"
+  "xdg-utils",
+  "xvfb"
 ]
 
 [phases.build]
