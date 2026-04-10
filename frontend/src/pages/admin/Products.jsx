@@ -61,6 +61,7 @@ const Products = () => {
   const [validationResult, setValidationResult] = useState(null);
   const [importStatus, setImportStatus] = useState({ loading: false, result: null });
   const [confirm, setConfirm] = useState({ show: false, title: '', message: '', onConfirm: null });
+  const [deletedImageUrls, setDeletedImageUrls] = useState([]);
 
   const fetchProducts = useCallback(async (p = 1, q = '') => {
     try {
@@ -98,11 +99,26 @@ const Products = () => {
       files.forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
-          setImagePreviews(prev => [...prev, reader.result]);
+          setImagePreviews(prev => [...prev, { url: reader.result, isNew: true, file }]);
         };
         reader.readAsDataURL(file);
       });
     }
+  };
+
+  const handleRemoveImage = (index) => {
+    const preview = imagePreviews[index];
+    
+    // If it's an existing image (not a new upload), mark it for backend deletion
+    if (!preview.isNew) {
+      const urlToDelete = preview.url.replace(BACKEND_URL, '');
+      setDeletedImageUrls(prev => [...prev, urlToDelete]);
+    } else {
+      // If it's a newly selected local file, remove it from the productImages state
+      setProductImages(prev => prev.filter(f => f !== preview.file));
+    }
+
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const startEditing = async (product) => {
@@ -130,7 +146,10 @@ const Products = () => {
         status: detailedProduct.status || 'active',
         variants: detailedProduct.variants || []
       });
-      setImagePreviews(detailedProduct.images ? detailedProduct.images.map(img => img.image_url.startsWith('http') ? img.image_url : `${BACKEND_URL}${img.image_url}`) : []);
+      setImagePreviews(detailedProduct.images ? detailedProduct.images.map(img => ({
+        url: img.image_url.startsWith('http') ? img.image_url : `${BACKEND_URL}${img.image_url}`,
+        isNew: false
+      })) : []);
       setActiveTab('add');
     } catch (err) {
       toast.error('Failed to load product details');
@@ -149,6 +168,7 @@ const Products = () => {
     });
     setProductImages([]);
     setImagePreviews([]);
+    setDeletedImageUrls([]);
   };
 
   const handleAddVariant = () => {
@@ -186,6 +206,10 @@ const Products = () => {
       productImages.forEach(file => {
         formData.append('images', file);
       });
+
+      if (deletedImageUrls.length > 0) {
+        formData.append('deleted_image_urls', JSON.stringify(deletedImageUrls));
+      }
 
       if (editingProduct) {
         await api.put(`/admin/products/${editingProduct.id}`, formData, {
@@ -774,8 +798,23 @@ const Products = () => {
                       <input id="img-up" type="file" className="hidden" accept="image/*" multiple onChange={handleImageChange} />
                       {imagePreviews.length > 0 ? (
                         <div className="grid grid-cols-2 gap-2 w-full h-full overflow-y-auto p-1 custom-scrollbar">
-                          {imagePreviews.map((src, i) => (
-                            <img key={i} src={src} className="w-full aspect-square object-cover rounded-lg border border-[var(--border-color)]" />
+                          {imagePreviews.map((preview, i) => (
+                            <div key={i} className="relative group/img aspect-square rounded-lg border border-[var(--border-color)] overflow-hidden bg-[var(--bg-secondary)]">
+                              <img 
+                                src={preview.url} 
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" 
+                              />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveImage(i);
+                                }}
+                                className="absolute top-1 right-1 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover/img:opacity-100 transition-all shadow-lg hover:bg-red-600 active:scale-95"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
                           ))}
                           <div className="aspect-square bg-[var(--bg-secondary)] rounded-lg border-2 border-dashed border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)]">
                             <Plus size={20} />

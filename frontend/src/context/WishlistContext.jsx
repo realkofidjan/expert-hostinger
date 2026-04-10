@@ -10,7 +10,8 @@ export const WishlistProvider = ({ children }) => {
 
     const fetchWishlist = useCallback(async () => {
         const token = localStorage.getItem('token');
-        if (!token) {
+        // Robust check: ensure token exists and is a non-empty string that isn't legacy "null/undefined"
+        if (!token || token === 'null' || token === 'undefined') {
             setWishlist([]);
             return;
         }
@@ -21,13 +22,22 @@ export const WishlistProvider = ({ children }) => {
             setWishlist(res.data || []);
         } catch (error) {
             console.error('FETCH_WISHLIST_ERROR:', error);
+            // If we get a 401, the token is invalid/expired - clear it to stop future failed requests
+            if (error.response?.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                setWishlist([]);
+            }
         } finally {
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchWishlist();
+        const token = localStorage.getItem('token');
+        if (token && token !== 'null' && token !== 'undefined') {
+            fetchWishlist();
+        }
     }, [fetchWishlist]);
 
     const toggleWishlist = async (productId) => {

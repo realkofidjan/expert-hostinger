@@ -193,15 +193,23 @@ const updateProfile = async (req, res) => {
         const id = req.user.id;
         let signature = req.body.signature;
 
-        // If a file was uploaded, update the signature path
+        // If a file was uploaded, update the signature path and purge the old file
         if (req.file) {
-            signature = `/uploads/signatures/${req.file.filename}`;
+            signature = `assets/signature_imgs/${req.file.filename}`;
             
-            // Optional: delete old signature file if it exists
+            // Definitively remove the old signature file from the disk
             const [oldUser] = await db.query('SELECT signature FROM users WHERE id = ?', [id]);
             if (oldUser && oldUser[0] && oldUser[0].signature) {
+                // Construct absolute path to the old asset
                 const oldPath = path.join(__dirname, '../..', oldUser[0].signature);
-                if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+                try {
+                    if (fs.existsSync(oldPath)) {
+                        fs.unlinkSync(oldPath);
+                        console.log(`[CLEANUP] Purged legacy signature: ${oldPath}`);
+                    }
+                } catch (err) {
+                    console.error(`[CLEANUP_ERROR] Failed to purge legacy signature: ${err.message}`);
+                }
             }
         }
 
@@ -252,13 +260,31 @@ const resetDatabase = async (req, res) => {
         }
         await db.query('SET FOREIGN_KEY_CHECKS = 1');
 
+        // Clear physical assets
+        try {
+            if (fs.existsSync(ASSETS_DIR)) {
+                const items = fs.readdirSync(ASSETS_DIR);
+                for (const item of items) {
+                    const itemPath = path.join(ASSETS_DIR, item);
+                    if (fs.lstatSync(itemPath).isDirectory()) {
+                        fs.rmSync(itemPath, { recursive: true, force: true });
+                    } else {
+                        fs.unlinkSync(itemPath);
+                    }
+                }
+                console.log(`[RESET] Purged physical assets in ${ASSETS_DIR}`);
+            }
+        } catch (assetErr) {
+            console.error(`[RESET_ASSETS_ERROR] ${assetErr.message}`);
+        }
+
         // Log the action (to the freshly-cleared table — first entry)
         await db.query(
             'INSERT INTO activity_logs (user_id, action, context) VALUES (?, ?, ?)',
-            [req.user.id, 'RESET_DATABASE', `Database operational data reset by admin UID-${req.user.id}`]
+            [req.user.id, 'RESET_DATABASE', `Database operational data and assets reset by admin UID-${req.user.id}`]
         );
 
-        res.json({ message: 'Database reset complete. All products, orders, inquiries, projects, and logs have been cleared. User accounts, roles, and settings were preserved.' });
+        res.json({ message: 'Database reset complete. All products, orders, inquiries, projects, assets, and logs have been cleared. User accounts, roles, and settings were preserved.' });
     } catch (error) {
         console.error('RESET_DATABASE_ERROR:', error);
         // Ensure FK checks are re-enabled even on error

@@ -18,7 +18,7 @@ const UnderConstruction = () => {
       </p>
 
       <a
-        href="https://wa.me/233507103200"
+        href="https://wa.me/233574101615"
         className="inline-flex items-center gap-3 px-8 py-4 bg-green-500 hover:bg-green-400 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all hover:scale-105 shadow-xl shadow-green-500/20"
       >
         Contact Us on WhatsApp

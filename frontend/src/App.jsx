@@ -112,8 +112,9 @@ function App() {
                   <Route path="/projects" element={underConstruction ? <UnderConstruction /> : <PublicProjects />} />
                   <Route path="/services" element={underConstruction ? <UnderConstruction /> : <Services />} />
                   <Route path="/blog" element={underConstruction ? <UnderConstruction /> : <BlogListing />} />
-                  <Route path="/blog/:id" element={underConstruction ? <UnderConstruction /> : <BlogPost />} />
-                  <Route path="/products/:id" element={underConstruction ? <UnderConstruction /> : <ProductDetail />} />
+                  <Route path="/blog/:id/:slug?" element={underConstruction ? <UnderConstruction /> : <BlogPost />} />
+                  <Route path="/product/:id/:slug?" element={underConstruction ? <UnderConstruction /> : <ProductDetail />} />
+                  <Route path="/products/:id" element={<Navigate to="/" replace />} /> {/* Legacy Redirect */}
                   <Route path="/cart" element={underConstruction ? <UnderConstruction /> : <CartPage />} />
                   <Route path="/order-success" element={underConstruction ? <UnderConstruction /> : <OrderSuccess />} />
                   <Route path="/upload-receipt" element={underConstruction ? <UnderConstruction /> : <UploadReceipt />} />

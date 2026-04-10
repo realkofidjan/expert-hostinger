@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  ChevronLeft,
   Bell,
   Search,
   ClipboardList,
@@ -68,6 +69,7 @@ const AdminLayout = ({ children }) => {
   const notifRef = useRef(null);
   const notifPollRef = useRef(null);
 
+  const [utilsExpanded, setUtilsExpanded] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -384,90 +386,92 @@ const AdminLayout = ({ children }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-full transition-all duration-200 bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-yellow-500"
-              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
-              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-
-            {/* Notifications */}
-            <div ref={notifRef} className="relative">
+            {/* Collapsible Admin Utilities */}
+            <div className={`flex items-center gap-3 overflow-hidden transition-all duration-500 ease-in-out py-1 ${
+              utilsExpanded ? 'max-w-[300px] opacity-100' : 'max-w-0 opacity-0 pointer-events-none'
+            }`}>
+              {/* Theme Toggle */}
               <button
-                onClick={() => { setNotifOpen(o => !o); if (!notifOpen) fetchNotifications(); }}
-                className="p-2 rounded-full relative transition-colors text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                onClick={toggleTheme}
+                className="p-2 rounded-full transition-all duration-200 bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[var(--text-muted)] hover:bg-[var(--bg-tertiary)] hover:text-yellow-500"
+                title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               >
-                <Bell size={18} />
-                {unreadCount > 0 && (
-                  <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
+                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
               </button>
 
-              {notifOpen && (
-                <div
-                  className="absolute right-0 top-full mt-2 w-80 rounded-2xl shadow-2xl border border-[var(--border-color)] overflow-hidden z-50"
-                  style={{ backgroundColor: 'var(--bg-primary)' }}
+              {/* Notifications */}
+              <div ref={notifRef} className="relative">
+                <button
+                  onClick={() => { setNotifOpen(o => !o); if (!notifOpen) fetchNotifications(); }}
+                  className="p-2 rounded-full relative transition-colors text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
                 >
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-color)]">
-                    <p className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wider">Notifications</p>
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={handleMarkAllRead}
-                        className="flex items-center gap-1 text-[10px] font-bold text-green-500 hover:text-green-400 transition-colors"
-                      >
-                        <CheckCheck size={12} /> Mark all read
-                      </button>
-                    )}
-                  </div>
-
-                  {/* List */}
-                  <div className="max-h-80 overflow-y-auto custom-scrollbar">
-                    {notifications.length === 0 ? (
-                      <div className="py-10 text-center">
-                        <Bell size={24} className="mx-auto text-[var(--text-muted)] mb-2 opacity-40" />
-                        <p className="text-xs text-[var(--text-muted)]">No notifications yet</p>
-                      </div>
-                    ) : (
-                      notifications.map(n => (
-                        <button
-                          key={n.id}
-                          onClick={() => handleNotifClick(n)}
-                          className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[var(--bg-secondary)] transition-colors border-b border-[var(--border-color)] last:border-0 ${!n.is_read ? 'bg-green-500/5' : ''}`}
-                        >
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${n.type === 'new_order' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                            {n.type === 'new_order' ? <ShoppingBag size={14} /> : <Upload size={14} />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-bold truncate ${!n.is_read ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>{n.title}</p>
-                            <p className="text-[10px] text-[var(--text-muted)] mt-0.5 line-clamp-2 leading-relaxed">{n.message}</p>
-                            <p className="text-[9px] text-[var(--text-muted)] mt-1 opacity-60">
-                              {new Date(n.created_at).toLocaleString('en-GH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                          {!n.is_read && <div className="w-2 h-2 rounded-full bg-green-500 shrink-0 mt-1.5" />}
-                        </button>
-                      ))
-                    )}
-                  </div>
-
-                  {notifications.length > 0 && (
-                    <div className="px-4 py-2.5 border-t border-[var(--border-color)]">
-                      <button
-                        onClick={() => { setNotifOpen(false); navigate('/admin/orders'); }}
-                        className="w-full text-center text-[10px] font-black text-green-500 hover:text-green-400 uppercase tracking-wider transition-colors"
-                      >
-                        View All Orders →
-                      </button>
-                    </div>
+                  <Bell size={18} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none shadow-sm">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
                   )}
-                </div>
-              )}
+                </button>
+
+                {notifOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-2 w-80 rounded-2xl shadow-2xl border border-[var(--border-color)] overflow-hidden z-50"
+                    style={{ backgroundColor: 'var(--bg-primary)' }}
+                  >
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-color)]">
+                      <p className="text-xs font-black text-[var(--text-primary)] uppercase tracking-wider">Notifications</p>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={handleMarkAllRead}
+                          className="flex items-center gap-1 text-[10px] font-bold text-green-500 hover:text-green-400 transition-colors"
+                        >
+                          <CheckCheck size={12} /> Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                      {notifications.length === 0 ? (
+                        <div className="py-10 text-center">
+                          <Bell size={24} className="mx-auto text-[var(--text-muted)] mb-2 opacity-40" />
+                          <p className="text-xs text-[var(--text-muted)]">No notifications yet</p>
+                        </div>
+                      ) : (
+                        notifications.map(n => (
+                          <button
+                            key={n.id}
+                            onClick={() => handleNotifClick(n)}
+                            className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[var(--bg-secondary)] transition-colors border-b border-[var(--border-color)] last:border-0 ${!n.is_read ? 'bg-green-500/5' : ''}`}
+                          >
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${n.type === 'new_order' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                              {n.type === 'new_order' ? <ShoppingBag size={14} /> : <Upload size={14} />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-xs font-bold truncate ${!n.is_read ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>{n.title}</p>
+                              <p className="text-[10px] text-[var(--text-muted)] mt-0.5 line-clamp-2 leading-relaxed">{n.message}</p>
+                              <p className="text-[9px] text-[var(--text-muted)] mt-1 opacity-60">
+                                {new Date(n.created_at).toLocaleString('en-GH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            {!n.is_read && <div className="w-2 h-2 rounded-full bg-green-500 shrink-0 mt-1.5" />}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* EXPAND / COLLAPSE TOGGLE ARROW */}
+            <button
+              onClick={() => setUtilsExpanded(!utilsExpanded)}
+              className="p-2 rounded-full transition-all duration-200 bg-[var(--bg-secondary)] border border-[var(--border-color)] text-green-600 hover:bg-green-500 hover:text-white group"
+              title={utilsExpanded ? "Collapse shortcuts" : "Show more shortcuts"}
+            >
+              <div className="transition-transform duration-500">
+                {utilsExpanded ? <ChevronRight size={18} /> : <ChevronLeft size={18} className="animate-pulse" />}
+              </div>
+            </button>
 
             <div className={`h-7 w-px mx-1 ${isDarkMode ? 'bg-white/10' : 'bg-slate-200'}`}></div>
 

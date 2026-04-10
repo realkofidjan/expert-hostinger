@@ -10,7 +10,7 @@ import MainFooter from '../components/MainFooter';
 import { useCart } from '../context/CartContext';
 import CustomPhoneInput from '../components/ui/PhoneInput';
 import api from '../api';
-import { createProductUrl } from '../utils/url';
+import { createProductUrl, getImageUrl } from '../utils/url';
 
 
 const STEPS = ['Cart', 'Your Info', 'Delivery', 'Payment'];
@@ -217,7 +217,7 @@ const CartPage = () => {
           <li key={item.id} className="flex items-center gap-3">
             <Link to={createProductUrl({ id: item.id, name: item.name })} className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800 hover:opacity-80 transition-opacity">
               {item.image
-                ? <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                ? <img src={getImageUrl(item.image)} alt={item.name} className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center text-lg">🪑</div>}
             </Link>
             <div className="flex flex-col flex-1 min-w-0">
@@ -305,7 +305,7 @@ const CartPage = () => {
                   <div key={item.id} className="bg-white dark:bg-gray-900 rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-lg flex gap-5 items-center">
                     <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-800">
                       {item.image
-                        ? <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        ? <img src={getImageUrl(item.image)} alt={item.name} className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center text-3xl">🪑</div>}
                     </div>
                     <div className="flex-1 min-w-0">

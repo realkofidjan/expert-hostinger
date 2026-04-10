@@ -4,10 +4,9 @@ import MainNavbar from '../components/MainNavbar';
 import MainFooter from '../components/MainFooter';
 import api from '../api';
 import { Search, ArrowRight, Calendar, BookOpen, X } from 'lucide-react';
-import { createBlogUrl } from '../utils/url';
+import { createBlogUrl, getImageUrl } from '../utils/url';
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
-const imgUrl = (url) => (!url ? '' : url.startsWith('http') ? url : `${BACKEND_URL}${url}`);
+
 const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
 export default function BlogListing() {
@@ -120,7 +119,7 @@ export default function BlogListing() {
                   <div className="md:w-3/5 aspect-video md:aspect-auto overflow-hidden relative bg-gray-200 dark:bg-gray-800">
                     {featured.image_url ? (
                       <img
-                        src={imgUrl(featured.image_url)}
+                        src={getImageUrl(featured.image_url)}
                         alt={featured.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
@@ -162,7 +161,7 @@ export default function BlogListing() {
                   >
                     <div className="aspect-video overflow-hidden relative bg-gray-200 dark:bg-gray-800">
                       {post.image_url ? (
-                        <img src={imgUrl(post.image_url)} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <img src={getImageUrl(post.image_url)} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-green-100 dark:from-green-900/60 to-gray-200 dark:to-gray-800 flex items-center justify-center">
                           <BookOpen size={28} className="text-green-400 dark:text-green-800" />

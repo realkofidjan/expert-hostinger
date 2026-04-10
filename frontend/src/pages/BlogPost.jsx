@@ -4,10 +4,9 @@ import MainNavbar from '../components/MainNavbar';
 import MainFooter from '../components/MainFooter';
 import api from '../api';
 import { ArrowLeft, Calendar, ArrowRight, BookOpen, X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
-import { decodeId, createBlogUrl } from '../utils/url';
+import { decodeId, createBlogUrl, getImageUrl } from '../utils/url';
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
-const imgUrl = (url) => (!url ? '' : url.startsWith('http') ? url : `${BACKEND_URL}${url}`);
+
 const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
 export default function BlogPost() {
@@ -100,7 +99,7 @@ export default function BlogPost() {
         {post.image_url && (
           <>
             <img
-              src={imgUrl(post.image_url)}
+              src={getImageUrl(post.image_url)}
               alt={post.title}
               className="w-full h-full object-cover"
             />
@@ -163,7 +162,7 @@ export default function BlogPost() {
                   className="group aspect-video rounded-2xl overflow-hidden relative bg-gray-200 dark:bg-gray-800 border border-gray-200 dark:border-white/10 hover:border-green-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/10"
                 >
                   <img
-                    src={imgUrl(img.image_url)}
+                    src={getImageUrl(img.image_url)}
                     alt=""
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
@@ -193,12 +192,12 @@ export default function BlogPost() {
               {related.map(p => (
                 <Link
                   key={p.id}
-                  to={`/blog/${p.id}`}
+                  to={createBlogUrl(p)}
                   className="group rounded-3xl overflow-hidden border border-gray-200 dark:border-white/10 hover:border-green-500/30 transition-all duration-400 hover:-translate-y-1 hover:shadow-xl hover:shadow-green-500/10 flex flex-col"
                 >
                   <div className="aspect-video overflow-hidden bg-gray-200 dark:bg-gray-800 relative">
                     {p.image_url ? (
-                      <img src={imgUrl(p.image_url)} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      <img src={getImageUrl(p.image_url)} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-green-100 dark:from-green-900/40 to-gray-200 dark:to-gray-800 flex items-center justify-center">
                         <BookOpen size={24} className="text-green-400 dark:text-green-800" />
@@ -242,7 +241,7 @@ export default function BlogPost() {
           {/* Main image */}
           <img
             key={lightbox}
-            src={imgUrl(gallery[lightbox]?.image_url)}
+            src={getImageUrl(gallery[lightbox]?.image_url)}
             alt=""
             className="max-h-[80vh] max-w-[90vw] object-contain rounded-2xl"
           />
@@ -276,7 +275,7 @@ export default function BlogPost() {
                     i === lightbox ? 'border-green-400 opacity-100' : 'border-transparent opacity-40 hover:opacity-70'
                   }`}
                 >
-                  <img src={imgUrl(img.image_url)} alt="" className="w-full h-full object-cover" />
+                  <img src={getImageUrl(img.image_url)} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>

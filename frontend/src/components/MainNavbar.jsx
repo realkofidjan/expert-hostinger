@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, Moon, Sun, Menu, X, ChevronRight, LogOut, LayoutDashboard, Phone, Heart } from 'lucide-react';
+import { Search, ShoppingCart, User, Moon, Sun, Menu, X, ChevronRight, ChevronLeft, LogOut, LayoutDashboard, Phone, Heart, Settings } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -22,6 +22,7 @@ const MainNavbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { cartCount, setIsCartOpen } = useCart();
   const { wishlist } = useWishlist();
+  const [utilsExpanded, setUtilsExpanded] = useState(false);
   const userMenuRef = useRef(null);
 
   // Read auth state from localStorage
@@ -128,17 +129,11 @@ const MainNavbar = () => {
             })}
           </nav>
 
-          {/* Right icons */}
+          {/* Right icons area */}
           <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-2">
-
-
-              {/* Dark mode toggle */}
-              <button className={dynamicIconClass} onClick={toggleTheme} aria-label="Toggle theme">
-                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-              </button>
-
-              {/* Call button */}
+            <div className="flex items-center gap-2 transition-all duration-500">
+              
+              {/* Always Visible Support Icon */}
               <a 
                 href="tel:+233571386600"
                 className={dynamicIconClass}
@@ -147,28 +142,49 @@ const MainNavbar = () => {
                 <Phone size={20} />
               </a>
 
-              {/* Wishlist */}
-              <Link
-                to="/profile?tab=wishlist"
-                className={`${dynamicIconClass} relative`}
-                title="My Favorites"
-              >
-                <Heart size={20} className={wishlist.length > 0 ? "text-red-500 fill-red-500/20" : ""} />
-                {wishlist.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                    {wishlist.length > 9 ? '9+' : wishlist.length}
-                  </span>
-                )}
-              </Link>
+              {/* Collapsible Utility Belt (Desktop/Tablet) */}
+              <div className={`hidden sm:flex items-center gap-2 overflow-hidden transition-all duration-500 ease-in-out py-1 ${
+                utilsExpanded ? 'max-w-[500px] opacity-100' : 'max-w-0 opacity-0 pointer-events-none'
+              }`}>
+                {/* Dark mode toggle */}
+                <button className={dynamicIconClass} onClick={toggleTheme} aria-label="Toggle theme" title="Toggle Theme">
+                  {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                </button>
 
-              {/* Cart */}
-              <button className={`${dynamicIconClass} relative`} onClick={() => setIsCartOpen(true)} aria-label="Open cart">
-                <ShoppingCart size={20} />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                    {cartCount > 9 ? '9+' : cartCount}
-                  </span>
-                )}
+                {/* Wishlist */}
+                <Link
+                  to="/profile?tab=wishlist"
+                  className={`${dynamicIconClass} relative`}
+                  title="My Favorites"
+                >
+                  <Heart size={20} className={wishlist.length > 0 ? "text-red-500 fill-red-500/20" : ""} />
+                  {wishlist.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm">
+                      {wishlist.length > 9 ? '9+' : wishlist.length}
+                    </span>
+                  )}
+                </Link>
+
+                {/* Cart */}
+                <button className={`${dynamicIconClass} relative`} onClick={() => setIsCartOpen(true)} aria-label="Open cart" title="My Cart">
+                  <ShoppingCart size={20} />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm">
+                      {cartCount > 9 ? '9+' : cartCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* EXPAND / COLLAPSE TOGGLE ICON - Always show on desktop/tablet */}
+              <button 
+                onClick={() => setUtilsExpanded(!utilsExpanded)}
+                className={`hidden sm:flex ${dynamicIconClass} group !bg-green-500/10 border-green-500/20 text-green-600 hover:!bg-green-500 hover:text-white`}
+                title={utilsExpanded ? "Collapse shortcuts" : "Show more shortcuts"}
+              >
+                <div className={`transition-transform duration-500`}>
+                  {utilsExpanded ? <ChevronRight size={20} /> : <ChevronLeft size={20} className="animate-pulse" />}
+                </div>
               </button>
 
               {/* User / Profile / Login */}

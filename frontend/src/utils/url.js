@@ -37,11 +37,42 @@ export const getImageUrl = (path) => {
  */
 export const createProductUrl = (product) => {
     if (!product) return '#';
-    const id = product.id;
+    const id = encodeId(product.id);
     const name = product.name || '';
     const slug = name.toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)+/g, '');
     
     return `/product/${id}/${slug}`;
+};
+
+/**
+ * Creates a slugified blog URL
+ */
+export const createBlogUrl = (post) => {
+    if (!post) return '#';
+    const id = encodeId(post.id);
+    const title = post.title || '';
+    const slug = title.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');
+    
+    return `/blog/${id}/${slug}`;
+};
+
+/**
+ * URL ID Encoding/Decoding utilities
+ */
+export const encodeId = (id) => {
+    if (!id) return '';
+    return btoa(id.toString()).replace(/=/g, '');
+};
+
+export const decodeId = (encodedId) => {
+    if (!encodedId) return null;
+    try {
+        return parseInt(atob(encodedId));
+    } catch {
+        return null;
+    }
 };

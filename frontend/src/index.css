@@ -290,8 +290,14 @@ input[type="range"].dual-range::-moz-range-thumb {
 .animate-slideDown { animation: slideDown 0.3s ease-out; }
 .animate-scaleIn { animation: scaleIn 0.2s ease-out; }
 .animate-pulse-slow { animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-spin-slow { animation: spin-slow 8s linear infinite; }
 .animate-gradient { background-size: 200% 200%; animation: gradientShift 4s ease infinite; }
 .modal-enter { animation: modalFadeIn 0.3s ease-out; }
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
 /* Animation Delays */
 .animation-delay-200 { animation-delay: 200ms; }

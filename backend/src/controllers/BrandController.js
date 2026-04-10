@@ -94,6 +94,12 @@ const updateBrand = async (req, res) => {
         
         let logoPath = req.body.logo; // Keep existing if no new file
         if (req.file) {
+            // Delete old logo if it exists
+            const [currentBrand] = await db.query('SELECT logo FROM brands WHERE id = ?', [id]);
+            if (currentBrand && currentBrand[0] && currentBrand[0].logo) {
+                const oldAbs = path.join(__dirname, '../../assets', currentBrand[0].logo.replace('/assets/', ''));
+                if (fs.existsSync(oldAbs)) try { fs.unlinkSync(oldAbs); } catch {}
+            }
             const { relativeDir, absoluteDir } = getAssetPath('brands');
             const filename = `${Date.now()}-${req.file.originalname.replace(/\s+/g, '_')}`;
             const absolutePath = path.join(absoluteDir, filename);

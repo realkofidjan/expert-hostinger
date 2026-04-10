@@ -210,10 +210,30 @@ const updateProduct = async (req, res) => {
             variants: parsedVariants
         });
 
-        // Handle Image Uploads
+        // Handle Image Deletions (Gallery Pruning)
+        if (req.body.deleted_image_urls) {
+            try {
+                const toDelete = JSON.parse(req.body.deleted_image_urls);
+                if (Array.isArray(toDelete) && toDelete.length > 0) {
+                    for (const url of toDelete) {
+                        const absPath = path.join(__dirname, '../../assets', url.replace('/assets/', ''));
+                        if (fs.existsSync(absPath)) try { fs.unlinkSync(absPath); } catch {}
+                        await Product.deleteImage(id, url);
+                    }
+                }
+            } catch (e) {
+                console.warn('Pruning images failed:', e.message);
+            }
+        }
+
+        // Handle New Image Uploads
         if (req.files && req.files.length > 0) {
             const { relativeDir, absoluteDir } = getAssetPath('products', id);
             const imageRecords = [];
+
+            // Check if we need to set a primary image (if none exist or all were deleted)
+            const currentImages = await Product.getById(id);
+            const hasPrimary = currentImages?.images?.some(img => img.is_primary);
 
             for (let i = 0; i < req.files.length; i++) {
                 const file = req.files[i];
@@ -222,7 +242,8 @@ const updateProduct = async (req, res) => {
                 const relativePath = `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
 
                 await optimizeImage(file.buffer, absolutePath);
-                imageRecords.push({ url: relativePath, is_primary: i === 0 ? 1 : 0 });
+                // Set as primary only if no primary exists and it's the first in this batch
+                imageRecords.push({ url: relativePath, is_primary: (!hasPrimary && i === 0) ? 1 : 0 });
             }
 
             await Product.addImages(id, imageRecords);
@@ -247,7 +268,18 @@ const updateProduct = async (req, res) => {
  */
 const deleteProduct = async (req, res) => {
     try {
-        await Product.delete(req.params.id);
+        const id = req.params.id;
+        const product = await Product.getById(id);
+        
+        if (product && product.images) {
+            // Surgically purge all associated image files
+            product.images.forEach(img => {
+                const absPath = path.join(__dirname, '../../assets', img.image_url.replace('/assets/', ''));
+                if (fs.existsSync(absPath)) try { fs.unlinkSync(absPath); } catch {}
+            });
+        }
+
+        await Product.delete(id);
         
         // Log action
         await db.query(

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { X, ShoppingCart, Plus, Minus, Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { createProductUrl } from '../utils/url';
+import { createProductUrl, getImageUrl } from '../utils/url';
 import {
   Drawer,
   DrawerBody,
@@ -72,7 +72,7 @@ const CartSidebar = () => {
                 <div key={`${item.id}-${item.variant}`} className="flex gap-4 group">
                   <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-white/5">
                     {item.image
-                      ? <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      ? <img src={getImageUrl(item.image)} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       : <div className="w-full h-full flex items-center justify-center text-2xl">🪑</div>}
                   </div>
                   <div className="flex-1 min-w-0">

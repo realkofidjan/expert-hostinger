@@ -16,6 +16,7 @@ import api from '../api';
 import { useAlert } from '../context/AlertContext';
 import { useSocket } from '../context/SocketContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useRole } from '../utils/permissions';
 
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
 
@@ -32,7 +33,7 @@ const Profile = () => {
   const [editForm, setEditForm] = useState({ full_name: '', phone: '' });
   const [saving, setSaving] = useState(false);
   const [signatureFile, setSignatureFile] = useState(null);
-  const [signaturePreview, setSignaturePreview] = useState(user?.signature ? `${BACKEND_URL}${user.signature}` : null);
+  const [signaturePreview, setSignaturePreview] = useState(user?.signature ? `${BACKEND_URL}/${user.signature}` : null);
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -46,6 +47,8 @@ const Profile = () => {
   const [addressForm, setAddressForm] = useState({ address_line1: '', city: '', region: '', landmark: '', is_default: false });
   const [regions, setRegions] = useState([]);
   const [cancelling, setCancelling] = useState(false);
+  const { role, isAdmin, isStaff, isSubAdmin } = useRole();
+  const isEmployee = isAdmin || isStaff || isSubAdmin;
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, label: 'Confirm', color: 'red' });
 
   useEffect(() => {
@@ -58,6 +61,9 @@ const Profile = () => {
         setUser(res.data);
         localStorage.setItem('user', JSON.stringify(res.data));
         setEditForm({ full_name: res.data.full_name || '', phone: res.data.phone || '' });
+        if (res.data.signature) {
+          setSignaturePreview(`${BACKEND_URL}/${res.data.signature}`);
+        }
       })
       .catch(err => { if (err.response?.status === 401) handleLogout(); });
   }, [token, navigate]);
@@ -221,7 +227,7 @@ const Profile = () => {
       setIsEditing(false);
       setSignatureFile(null);
       if (res.data.user.signature) {
-        setSignaturePreview(`${BACKEND_URL}${res.data.user.signature}`);
+        setSignaturePreview(`${BACKEND_URL}/${res.data.user.signature}`);
       }
       showAlert('success', 'Profile Updated', 'Your identity details have been archived successfully.');
     } catch (err) {
@@ -383,7 +389,7 @@ const Profile = () => {
                         </div>
                       </div>
                       
-                      {['admin', 'staff', 'sub-admin'].includes(user.role?.toLowerCase()) && (
+                      {isEmployee && (
                         <div className="space-y-4">
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Digital Signature (For Proforma Invoices)</label>
                           <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -447,7 +453,7 @@ const Profile = () => {
                           </div>
                         </div>
                       ))}
-                      {['admin', 'staff', 'sub-admin'].includes(user.role?.toLowerCase()) && (
+                      {isEmployee && (
                         <div className="p-6 bg-gray-50 dark:bg-gray-800/40 rounded-[2rem] flex items-center gap-6 md:col-span-2">
                           <div className="w-12 h-12 rounded-2xl bg-white dark:bg-gray-800 flex items-center justify-center text-blue-600 shadow-sm border border-gray-100 dark:border-gray-700 shrink-0">
                             <ShieldCheck size={20} />
@@ -456,7 +462,7 @@ const Profile = () => {
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Official Digital Signature</p>
                             {user.signature ? (
                               <div className="h-12 bg-white dark:bg-gray-900 rounded-xl p-2 border border-gray-100 dark:border-gray-800 inline-block">
-                                <img src={`${BACKEND_URL}${user.signature}`} alt="Digital Signature" className="h-full w-auto object-contain" />
+                                <img src={`${BACKEND_URL}/${user.signature}`} alt="Digital Signature" className="h-full w-auto object-contain" />
                               </div>
                             ) : (
                               <p className="text-xs font-bold text-gray-400 italic">No signature saved. Edit profile to upload.</p>

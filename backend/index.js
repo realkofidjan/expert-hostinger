@@ -57,7 +57,7 @@ const receiptUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-const signatureDir = path.join(__dirname, 'uploads', 'signatures');
+const signatureDir = path.join(__dirname, 'assets', 'signature_imgs');
 if (!fs.existsSync(signatureDir)) fs.mkdirSync(signatureDir, { recursive: true });
 
 const signatureStorage = multer.diskStorage({

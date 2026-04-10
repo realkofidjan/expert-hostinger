@@ -2,6 +2,8 @@ const db = require('../config/db');
 const xlsx = require('xlsx');
 const archiver = require('archiver');
 const AdmZip = require('adm-zip');
+const path = require('path');
+const fs = require('fs');
 
 const BACKUP_TABLES = [
   'users', 'products', 'product_variants', 'product_images',
@@ -30,10 +32,17 @@ const exportBackup = async (req, res) => {
         const wb = xlsx.utils.book_new();
         xlsx.utils.book_append_sheet(wb, ws, table);
         const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
-        archive.append(Buffer.from(buffer), { name: `${table}.xlsx` });
+        archive.append(Buffer.from(buffer), { name: `data/${table}.xlsx` });
       } catch (e) {
         console.warn(`Backup skip ${table}:`, e.message);
       }
+    }
+
+    // Surgical archival of physical assets (Excluding uploads as requested)
+    const assetsDir = path.join(__dirname, '../../assets');
+    
+    if (fs.existsSync(assetsDir)) {
+      archive.directory(assetsDir, 'assets');
     }
 
     await archive.finalize();
@@ -48,13 +57,44 @@ const restoreBackup = async (req, res) => {
 
   try {
     const zip = new AdmZip(req.file.buffer);
-    const entries = zip.getEntries().filter(e => e.entryName.endsWith('.xlsx'));
     const results = [];
 
+    // ── Phase 1: Physical Asset Restoration ──────────────────────────────────
+    const targetDir = path.join(__dirname, '../../');
+    try {
+      // Extract assets if they exist in the ZIP
+      const zipEntries = zip.getEntries();
+      const hasAssets = zipEntries.some(e => e.entryName.startsWith('assets/'));
+
+      if (hasAssets) {
+        // Clear current assets before restoring to ensure a clean state
+        const assetsPath = path.join(__dirname, '../../assets');
+        if (fs.existsSync(assetsPath)) {
+          const items = fs.readdirSync(assetsPath);
+          for (const item of items) {
+            const itemPath = path.join(assetsPath, item);
+            try {
+              if (fs.lstatSync(itemPath).isDirectory()) fs.rmSync(itemPath, { recursive: true, force: true });
+              else fs.unlinkSync(itemPath);
+            } catch (e) { console.warn(`Cleanup skip ${item}:`, e.message); }
+          }
+        }
+        
+        zip.extractEntryTo('assets/', targetDir, true, true);
+        results.push({ area: 'assets', status: 'restored' });
+      }
+    } catch (err) {
+      console.warn('Asset restore issue:', err.message);
+      results.push({ area: 'files', status: 'partial/error', reason: err.message });
+    }
+
+    // ── Phase 2: Database Data Restoration ──────────────────────────────────
+    const dataEntries = zip.getEntries().filter(e => e.entryName.startsWith('data/') && e.entryName.endsWith('.xlsx'));
+    
     await db.query('SET FOREIGN_KEY_CHECKS = 0');
 
-    for (const entry of entries) {
-      const tableName = entry.entryName.replace(/\.xlsx$/i, '');
+    for (const entry of dataEntries) {
+      const tableName = entry.entryName.replace('data/', '').replace(/\.xlsx$/i, '');
 
       if (!BACKUP_TABLES.includes(tableName)) {
         results.push({ table: tableName, status: 'skipped', reason: 'Unknown table' });

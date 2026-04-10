@@ -40,10 +40,10 @@ const User = {
      * @desc    Update user details
      */
     update: async (id, userData) => {
-        const { full_name, email, phone, role, status } = userData;
+        const { full_name, email, phone, role, status, signature } = userData;
         const [result] = await db.query(
-            'UPDATE users SET full_name = ?, email = ?, phone = ?, role = ?, status = ? WHERE id = ?',
-            [full_name, email, phone, role, status, id]
+            'UPDATE users SET full_name = ?, email = ?, phone = ?, role = ?, status = ?, signature = ? WHERE id = ?',
+            [full_name, email, phone, role, status, signature, id]
         );
         return result.affectedRows > 0;
     },
@@ -55,7 +55,7 @@ const User = {
      */
     findById: async (id) => {
         const [rows] = await db.query(
-            'SELECT id, full_name, email, phone, role, created_at FROM users WHERE id = ?',
+            'SELECT id, full_name, email, phone, role, signature, created_at FROM users WHERE id = ?',
             [id]
         );
         return rows[0];

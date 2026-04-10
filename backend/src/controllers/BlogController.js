@@ -142,10 +142,17 @@ const updateBlog = async (req, res) => {
 
         const slug = title ? title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '') : blog.slug;
 
-        // Cover image
+        // Handle cover image update and cleanup
         let imagePath = blog.image_url;
         const coverFile = req.files?.['image']?.[0];
-        if (coverFile) imagePath = await saveFile(coverFile);
+        if (coverFile) {
+            // Delete old cover image if it exists
+            if (blog.image_url) {
+                const oldAbs = path.join(__dirname, '../../assets', blog.image_url.replace('/assets/', ''));
+                if (fs.existsSync(oldAbs)) try { fs.unlinkSync(oldAbs); } catch {}
+            }
+            imagePath = await saveFile(coverFile);
+        }
 
         await Blog.update(id, {
             title: title || blog.title,
