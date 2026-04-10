@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { ShoppingBag, Eye, Star, ArrowRight, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
-import { createProductUrl } from '../utils/url';
+import { createProductUrl, getImageUrl } from '../utils/url';
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
+
 
 const getColorCode = (name) => {
   const colors = {
@@ -29,7 +29,7 @@ const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const activeWishlisted = isWishlisted(product.id);
-  const img = product.primary_image ? `${BACKEND_URL}${product.primary_image}` : null;
+  const img = getImageUrl(product.primary_image);
   const productUrl = createProductUrl(product);
 
   const handleAddToCart = (e) => {

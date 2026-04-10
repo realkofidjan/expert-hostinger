@@ -31,3 +31,17 @@ export const getImageUrl = (path) => {
     // Combine with backend URL
     return `${BACKEND_URL}${cleanPath}`;
 };
+
+/**
+ * Creates a slugified product URL for SEO-friendly navigation
+ */
+export const createProductUrl = (product) => {
+    if (!product) return '#';
+    const id = product.id;
+    const name = product.name || '';
+    const slug = name.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '');
+    
+    return `/product/${id}/${slug}`;
+};
