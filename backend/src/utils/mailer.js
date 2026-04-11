@@ -1,27 +1,29 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// IPv4 is enforced globally in index.js via dns.lookup patch.
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+// Resend uses HTTPS (port 443) — works perfectly on Railway.
+// No SMTP ports needed, no IPv6 issues.
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendMail = async ({ to, subject, html, text, attachments }) => {
-  if (!process.env.SMTP_USER) {
-    throw new Error('SMTP_NOT_CONFIGURED');
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY is not configured. Add it to your environment variables.');
   }
-  await transporter.sendMail({
-    from: `"Expert Office Furnish" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-    to,
+
+  const fromAddress = process.env.EMAIL_FROM || 'Expert Office Furnish <onboarding@resend.dev>';
+
+  // Convert nodemailer-style attachments to Resend format
+  const resendAttachments = attachments?.map(att => ({
+    filename: att.filename,
+    content: att.content instanceof Buffer ? att.content : Buffer.from(att.content),
+  }));
+
+  await resend.emails.send({
+    from: fromAddress,
+    to: Array.isArray(to) ? to : [to],
     subject,
-    text,
     html,
-    attachments,
+    text,
+    attachments: resendAttachments,
   });
 };
 
