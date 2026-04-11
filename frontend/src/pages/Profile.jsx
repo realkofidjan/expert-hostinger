@@ -12,6 +12,7 @@ import ConfirmModal from '../components/admin/ConfirmModal';
 import MainNavbar from '../components/MainNavbar';
 import MainFooter from '../components/MainFooter';
 import ProductCard from '../components/ProductCard';
+import WriteReviewModal from '../components/WriteReviewModal';
 import api from '../api';
 import { useAlert } from '../context/AlertContext';
 import { useSocket } from '../context/SocketContext';
@@ -46,10 +47,10 @@ const Profile = () => {
   const [editingAddress, setEditingAddress] = useState(null);
   const [addressForm, setAddressForm] = useState({ address_line1: '', city: '', region: '', landmark: '', is_default: false });
   const [regions, setRegions] = useState([]);
-  const [cancelling, setCancelling] = useState(false);
   const { role, isAdmin, isStaff, isSubAdmin } = useRole();
   const isEmployee = isAdmin || isStaff || isSubAdmin;
   const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', onConfirm: null, label: 'Confirm', color: 'red' });
+  const [reviewModalData, setReviewModalData] = useState({ open: false, productId: null, productName: '' });
 
   useEffect(() => {
     if (!token || !user) {
@@ -789,6 +790,14 @@ const Profile = () => {
                             <p className="text-xs text-gray-400">×{item.quantity} @ ₵{parseFloat(item.unit_price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}</p>
                           </div>
                           <p className="font-black text-sm text-gray-900 dark:text-white shrink-0">₵{parseFloat(item.subtotal).toLocaleString('en-GH', { minimumFractionDigits: 2 })}</p>
+                          {(selectedOrder.status === 'delivered' || selectedOrder.status === 'collected') && (
+                            <button
+                                onClick={() => setReviewModalData({ open: true, productId: item.product_id, productName: item.product_name })}
+                                className="px-3 py-1.5 text-[10px] font-bold bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500 hover:text-white border border-yellow-500/20 rounded-lg transition-colors ml-2 shrink-0 flex items-center gap-1"
+                            >
+                                <MessageSquare size={12} /> Rate Item
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1000,6 +1009,15 @@ const Profile = () => {
         onConfirm={confirmModal.onConfirm}
         onClose={() => setConfirmModal(prev => ({ ...prev, show: false }))}
       />
+
+      {reviewModalData.open && (
+        <WriteReviewModal
+            productId={reviewModalData.productId}
+            productName={reviewModalData.productName}
+            onClose={() => setReviewModalData({ open: false, productId: null, productName: '' })}
+            onSuccess={() => setReviewModalData({ open: false, productId: null, productName: '' })}
+        />
+      )}
     </div>
   );
 };

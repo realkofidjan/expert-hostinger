@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Pagination from '../../components/admin/Pagination';
+import CreateOfflineOrderModal from '../../components/admin/CreateOfflineOrderModal';
 import api from '../../api';
 import AdminLayout from '../../components/admin/AdminLayout';
 import {
@@ -85,6 +86,7 @@ const Orders = () => {
   const [productResults, setProductResults] = useState([]);
   const [searchingProducts, setSearchingProducts] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [offlineModalOpen, setOfflineModalOpen] = useState(false);
   const printRef = useRef(null);
 
   const fetchOrders = useCallback(async (p = 1, status = 'all', payment = 'all', q = '') => {
@@ -347,9 +349,14 @@ const Orders = () => {
   return (
     <AdminLayout>
       <div className="flex flex-col animate-fadeIn">
-        <div className="mb-4 shrink-0">
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">Order Management</h1>
-          <p className="text-[var(--text-muted)] mt-1">View, process and track all customer orders</p>
+        <div className="mb-4 shrink-0 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-[var(--text-primary)]">Order Management</h1>
+            <p className="text-[var(--text-muted)] mt-1">View, process and track all customer orders</p>
+          </div>
+          <button onClick={() => setOfflineModalOpen(true)} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-colors shadow-lg shadow-green-500/20 active:scale-95">
+            <Plus size={16} /> <span className="hidden sm:inline">Offline Order</span>
+          </button>
         </div>
 
         <div className="glass p-4 rounded-2xl flex flex-col md:flex-row gap-4 shrink-0 mb-4">
@@ -636,6 +643,16 @@ const Orders = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {offlineModalOpen && (
+        <CreateOfflineOrderModal 
+          onClose={() => setOfflineModalOpen(false)} 
+          onSuccess={() => {
+            setOfflineModalOpen(false);
+            fetchOrders(1, filterStatus, filterPayment, searchQuery);
+          }}
+        />
       )}
     </AdminLayout>
   );

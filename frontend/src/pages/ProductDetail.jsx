@@ -62,6 +62,8 @@ const ProductDetail = () => {
   const [activeTab, setActiveTab] = useState('description');
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState({ average_rating: 0, total_reviews: 0 });
 
   useEffect(() => {
     setLoading(true);
@@ -93,6 +95,13 @@ const ProductDetail = () => {
       })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
+
+    api.get(`/reviews/product/${realId}`)
+      .then(r => {
+        setReviews(r.data.reviews || []);
+        setReviewStats(r.data.stats || { average_rating: 0, total_reviews: 0 });
+      })
+      .catch(() => {});
   }, [rawId]);
 
   const images = product?.images?.length
@@ -184,6 +193,7 @@ Could you please provide a formal quote for this?`;
     { id: 'description', label: 'Description', icon: <FileText className="w-4 h-4" /> },
     { id: 'specs', label: 'Specifications', icon: <LayoutGrid className="w-4 h-4" /> },
     { id: 'shipping', label: 'Shipping & Returns', icon: <Truck className="w-4 h-4" /> },
+    { id: 'reviews', label: 'Reviews', icon: <MessageSquare className="w-4 h-4" /> },
   ];
 
   const stripHtml = (html) => {
@@ -311,10 +321,14 @@ Could you please provide a formal quote for this?`;
                   {product.category_name}
                 </span>
               )}
-              <div className="flex items-center gap-1 text-yellow-500 ml-auto">
-                <Star className="w-3 h-3 fill-current" />
-                <span className="text-xs font-bold text-gray-500">4.9 (48 Reviews)</span>
-              </div>
+              {reviewStats && reviewStats.total_reviews > 0 && (
+                <div className="flex items-center gap-1 text-yellow-500 ml-auto cursor-pointer" onClick={() => setActiveTab('reviews')} >
+                  <Star className="w-3 h-3 fill-current" />
+                  <span className="text-xs font-bold text-gray-500">
+                    {parseFloat(reviewStats.average_rating).toFixed(1)} ({reviewStats.total_reviews} Review{reviewStats.total_reviews !== 1 ? 's' : ''})
+                  </span>
+                </div>
+              )}
             </div>
 
             <h1 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white leading-tight mb-6">
@@ -501,6 +515,51 @@ Could you please provide a formal quote for this?`;
                     <p className="text-sm text-gray-600 dark:text-gray-400 font-bold uppercase">3 YEARS</p>
                     <p className="text-xs text-gray-500 mt-1">Our products are engineered for longevity, backed by a comprehensive 3-year structural warranty.</p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'reviews' && (
+              <div className="animate-fadeIn">
+                <div className="flex flex-col md:flex-row gap-8 mb-12 items-start">
+                  <div className="p-8 bg-gray-50 dark:bg-gray-900 rounded-3xl text-center md:flex-shrink-0 w-full md:w-64">
+                    <p className="text-6xl font-black text-gray-900 dark:text-white mb-2">
+                       {parseFloat(reviewStats?.average_rating || 0).toFixed(1)}
+                    </p>
+                    <div className="flex justify-center text-yellow-500 mb-2">
+                        {[1,2,3,4,5].map(s => (
+                            <Star key={s} size={20} className={s <= Math.round(reviewStats?.average_rating || 0) ? "fill-current" : "text-gray-300 dark:text-gray-700"} />
+                        ))}
+                    </div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Based on {reviewStats?.total_reviews || 0} reviews</p>
+                  </div>
+                  <div className="flex-1 w-full space-y-4">
+                     <div className="p-4 border border-blue-100 bg-blue-50 dark:bg-blue-900/10 dark:border-blue-800/30 rounded-2xl flex gap-3">
+                         <ShieldCheck className="text-blue-500 shrink-0" size={20}/>
+                         <p className="text-xs text-gray-600 dark:text-gray-400 font-medium">To protect our community, reviews can only be left by verified buyers via their Profiles after receiving this product.</p>
+                     </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                    {reviews.length === 0 ? (
+                        <p className="text-gray-500 italic text-center py-10 border-t border-gray-100 dark:border-gray-800">No reviews yet for this product.</p>
+                    ) : reviews.map(r => (
+                        <div key={r.id} className="p-6 border border-gray-100 dark:border-gray-800 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50">
+                             <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{r.user_name}</h4>
+                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{new Date(r.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div className="flex gap-1 text-yellow-500">
+                                   {[1,2,3,4,5].map(s => (
+                                     <Star key={s} size={14} className={s <= r.rating ? "fill-current" : "text-gray-300 dark:text-gray-700"} />
+                                   ))}
+                                </div>
+                             </div>
+                             {r.comment && <p className="text-sm text-gray-600 dark:text-gray-400">{r.comment}</p>}
+                        </div>
+                    ))}
                 </div>
               </div>
             )}
