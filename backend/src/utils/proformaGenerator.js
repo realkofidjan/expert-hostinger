@@ -12,6 +12,21 @@ const getImageUrl = (path) => {
   return `${BASE_URL}${cleanPath}`;
 };
 
+const getImageUrlBase64 = (imgPath) => {
+  if (!imgPath) return '';
+  if (imgPath.startsWith('http')) return imgPath;
+  try {
+     const clean = imgPath.startsWith('/') ? imgPath.slice(1) : imgPath;
+     const absolutePath = path.join(__dirname, '..', '..', clean);
+     if (fs.existsSync(absolutePath)) {
+         const ext = path.extname(absolutePath).slice(1) || 'png';
+         const buffer = fs.readFileSync(absolutePath);
+         return `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${buffer.toString('base64')}`;
+     }
+  } catch (err) {}
+  return getImageUrl(imgPath); // fallback to network url if local not found
+};
+
 // Path to the logo file
 const LOGO_PATH = path.join(__dirname, '..', '..', 'assets', 'Company logo.png');
 let LOGO_BASE64 = '';
@@ -33,11 +48,12 @@ const buildProformaHtml = (invoice, items, cfg) => {
   let sigBase64 = '';
   if (invoice.creator_signature) {
     try {
-        const sigPath = path.join(__dirname, '..', '..', invoice.creator_signature);
+        const cleanSigPath = invoice.creator_signature.startsWith('/') ? invoice.creator_signature.slice(1) : invoice.creator_signature;
+        const sigPath = path.join(__dirname, '..', '..', cleanSigPath);
         if (fs.existsSync(sigPath)) {
             const sigBuffer = fs.readFileSync(sigPath);
-            const sigExt = path.extname(sigPath).slice(1);
-            sigBase64 = `data:image/${sigExt};base64,${sigBuffer.toString('base64')}`;
+            const sigExt = path.extname(sigPath).slice(1) || 'png';
+            sigBase64 = `data:image/${sigExt === 'jpg' ? 'jpeg' : sigExt};base64,${sigBuffer.toString('base64')}`;
         }
     } catch (err) {
         console.error('Error loading signature for proforma:', err.message);
@@ -47,22 +63,23 @@ const buildProformaHtml = (invoice, items, cfg) => {
   const rows = items.map(i => `
     <tr style="border-bottom:1px solid #f3f4f6">
       <td style="padding:10px 4px; text-align: center;">
-        <img src="${getImageUrl(i.image)}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px; background: #f9f9f9;" onerror="this.style.display='none'" />
+        <img src="${getImageUrlBase64(i.image)}" style="width: 40px; height: 40px; object-fit: contain; border-radius: 4px; background: #f9f9f9;" onerror="this.style.display='none'" />
       </td>
       <td style="padding:10px 4px">
         <div style="font-weight: 600">${i.name}</div>
         <div style="font-size: 10px; color: #666; margin-top: 2px">${i.description || ''}</div>
       </td>
       <td style="padding:10px 4px;text-align:center">${i.quantity}</td>
-      <td style="padding:10px 4px;text-align:right">₵${fmt(i.price)}</td>
-      <td style="padding:10px 4px;text-align:right">₵${fmt(i.total)}</td>
+      <td style="padding:10px 4px;text-align:right">GHS ${fmt(i.price)}</td>
+      <td style="padding:10px 4px;text-align:right">GHS ${fmt(i.total)}</td>
     </tr>`).join('');
 
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
   html, body { height: 100%; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; color: #111; background: #fff; line-height: 1.4; }
+  body { font-family: 'Roboto', 'Segoe UI', Arial, sans-serif; color: #111; background: #fff; line-height: 1.4; }
   .page-wrapper {
     display: flex;
     flex-direction: column;
@@ -166,15 +183,15 @@ const buildProformaHtml = (invoice, items, cfg) => {
         <tbody>
           <tr class="total-row">
             <td style="color: #666">Subtotal</td>
-            <td style="text-align: right; font-weight: 600">₵${fmt(invoice.subtotal)}</td>
+            <td style="text-align: right; font-weight: 600">GHS ${fmt(invoice.subtotal)}</td>
           </tr>
           <tr class="total-row">
             <td style="color: #666">VAT (${invoice.vat_percentage}%)</td>
-            <td style="text-align: right; font-weight: 600">₵${fmt(invoice.vat_amount)}</td>
+            <td style="text-align: right; font-weight: 600">GHS ${fmt(invoice.vat_amount)}</td>
           </tr>
           <tr class="total-row grand-total">
             <td>Grand Total</td>
-            <td style="text-align: right">GH₵ ${fmt(invoice.grand_total)}</td>
+            <td style="text-align: right">GHS ${fmt(invoice.grand_total)}</td>
           </tr>
         </tbody>
       </table>
