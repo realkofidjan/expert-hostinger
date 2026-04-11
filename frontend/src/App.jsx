@@ -23,6 +23,7 @@ import Logs from './pages/admin/Logs';
 import Discounts from './pages/admin/Discounts';
 import AdminSettings from './pages/admin/Settings';
 import Proforma from './pages/admin/Proforma';
+import CreateOfflineOrder from './pages/admin/CreateOfflineOrder';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Profile from './pages/Profile';
@@ -134,6 +135,7 @@ function App() {
                           <Route path="products" element={<Products />} />
                           <Route path="discounts" element={<Discounts />} />
                           <Route path="orders" element={<Orders />} />
+                          <Route path="orders/new" element={<CreateOfflineOrder />} />
                           <Route path="finance" element={<Finance />} />
                           <Route path="proforma" element={<Proforma />} />
                           <Route path="users" element={<Users />} />

@@ -39,6 +39,7 @@ const submitReview = async (req, res) => {
     try {
         const { product_id, rating, comment } = req.body;
         const user_id = req.user.id;
+        const user_email = req.user.email;
 
         if (!product_id || !rating) {
             return res.status(400).json({ error: 'Product ID and rating are required' });
@@ -49,11 +50,11 @@ const submitReview = async (req, res) => {
             SELECT o.id 
             FROM orders o
             JOIN order_items oi ON o.id = oi.order_id
-            WHERE o.user_id = ? 
+            WHERE (o.user_id = ? OR o.customer_email = ?)
             AND oi.product_id = ?
             AND o.status IN ('delivered', 'collected')
             LIMIT 1
-        `, [user_id, product_id]);
+        `, [user_id, user_email, product_id]);
 
         if (orders.length === 0) {
             return res.status(403).json({ error: 'You can only review products you have purchased and received.' });
