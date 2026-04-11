@@ -1,3 +1,19 @@
+// CRITICAL: Force ALL DNS lookups to IPv4 before anything else loads.
+// Railway has no outbound IPv6 support, causing ENETUNREACH on Hostinger SMTP.
+const dns = require('dns');
+const _originalLookup = dns.lookup;
+dns.lookup = function(hostname, options, callback) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = { family: 4 };
+  } else if (typeof options === 'number') {
+    options = { family: 4 };
+  } else {
+    options = Object.assign({}, options, { family: 4 });
+  }
+  return _originalLookup.call(this, hostname, options, callback);
+};
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
