@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
-const TIMEOUT_MS = 5 * 60 * 1000;   // 5 minutes
+const TIMEOUT_MS = 10 * 60 * 1000;   // 10 minutes
 const WARN_BEFORE = 60 * 1000;       // warn 1 minute before logout
 
 export const useInactivityLogout = () => {

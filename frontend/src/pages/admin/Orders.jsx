@@ -11,14 +11,16 @@ import { toast } from 'react-toastify';
 
 import { getImageUrl } from '../../utils/url';
 
-const STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'on_route', 'delivered', 'cancelled'];
+const DELIVERY_STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'on_route', 'delivered', 'cancelled'];
+const PICKUP_STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'ready_for_pickup', 'collected', 'cancelled'];
 
 const statusColor = (s) => {
   switch (s) {
-    case 'delivered': return 'bg-green-500/10 text-green-500 border-green-500/20';
+    case 'delivered': case 'collected': return 'bg-green-500/10 text-green-500 border-green-500/20';
     case 'confirmed': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
     case 'processing': return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
     case 'on_route': return 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20';
+    case 'ready_for_pickup': return 'bg-teal-500/10 text-teal-500 border-teal-500/20';
     case 'pending': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
     case 'cancelled': return 'bg-red-500/10 text-red-500 border-red-500/20';
     default: return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
@@ -513,7 +515,7 @@ const Orders = () => {
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--border-color)]">
                         <div>
                           <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider mb-2">Order Status</p>
-                          <StatusSelect value={selectedOrder.status} options={STATUS_OPTIONS} onChange={v => updateStatus(selectedOrder.id, 'status', v)} />
+                          <StatusSelect value={selectedOrder.status} options={selectedOrder.delivery_mode === 'pickup' ? PICKUP_STATUS_OPTIONS : DELIVERY_STATUS_OPTIONS} onChange={v => updateStatus(selectedOrder.id, 'status', v)} />
                         </div>
                         <div>
                           <p className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider mb-2">Payment Status</p>

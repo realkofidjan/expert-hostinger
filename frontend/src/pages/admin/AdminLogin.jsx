@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Loader2, Sun, Moon, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Loader2, Sun, Moon, Eye, EyeOff, LogIn, UserX } from 'lucide-react';
 import api from '../../api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from '../../context/ThemeContext';
 
 const AdminLogin = () => {
-    const [email, setEmail] = useState('');
+    const savedUser = JSON.parse(localStorage.getItem('admin_user') || 'null');
+    const [quickMode, setQuickMode] = useState(!!savedUser);
+
+    const [email, setEmail] = useState(savedUser?.email || '');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -36,6 +39,16 @@ const AdminLogin = () => {
             setLoading(false);
         }
     };
+
+    const switchAccount = () => {
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+        setQuickMode(false);
+        setEmail('');
+        setPassword('');
+    };
+
+    const initials = (savedUser?.full_name || savedUser?.email || 'A').charAt(0).toUpperCase();
 
     return (
         <div
@@ -78,53 +91,74 @@ const AdminLogin = () => {
                 >
                     {/* Card header */}
                     <div className="px-8 pt-8 pb-6 text-center border-b" style={{ borderColor: 'var(--border-color)' }}>
-                        <div className="flex justify-center mb-5">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-green-500 to-yellow-500 flex items-center justify-center shadow-lg shadow-green-500/30">
-                                <img
-                                    src="/assets/Company logo.png"
-                                    alt="Expert Office"
-                                    className="w-11 h-11 object-contain"
-                                    onError={(e) => { e.target.style.display = 'none'; }}
-                                />
-                            </div>
-                        </div>
-                        <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                            Admin Portal
-                        </h1>
-                        <p className="text-xs font-bold uppercase tracking-[0.2em] mt-1.5 text-green-500">
-                            Expert Office Management
-                        </p>
+                        {quickMode && savedUser ? (
+                            <>
+                                <div className="flex justify-center mb-4">
+                                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-green-500 to-yellow-400 flex items-center justify-center text-3xl font-black text-gray-900 shadow-xl shadow-green-500/20">
+                                        {initials}
+                                    </div>
+                                </div>
+                                <h1 className="text-xl font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>
+                                    Get logged back in
+                                </h1>
+                                <div className="mt-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                                    <Mail size={14} className="text-green-500 shrink-0" />
+                                    <span className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>{savedUser.email}</span>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex justify-center mb-5">
+                                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-green-500 to-yellow-500 flex items-center justify-center shadow-lg shadow-green-500/30">
+                                        <img
+                                            src="/assets/Company logo.png"
+                                            alt="Expert Office"
+                                            className="w-11 h-11 object-contain"
+                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                        />
+                                    </div>
+                                </div>
+                                <h1 className="text-2xl font-black tracking-tight" style={{ color: 'var(--text-primary)' }}>
+                                    Admin Portal
+                                </h1>
+                                <p className="text-xs font-bold uppercase tracking-[0.2em] mt-1.5 text-green-500">
+                                    Expert Office Management
+                                </p>
+                            </>
+                        )}
                     </div>
 
                     {/* Form */}
                     <form onSubmit={handleLogin} className="px-8 py-7 space-y-5">
-                        {/* Email field */}
-                        <div className="space-y-1.5">
-                            <label className="block text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>
-                                Email Address
-                            </label>
-                            <div className="relative group">
-                                <Mail
-                                    size={16}
-                                    className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
-                                    style={{ color: 'var(--text-muted)' }}
-                                />
-                                <input
-                                    type="email"
-                                    required
-                                    autoComplete="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="admin@expertoffice.com"
-                                    className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-medium border transition-all duration-200 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/15"
-                                    style={{
-                                        backgroundColor: 'var(--bg-tertiary)',
-                                        borderColor: 'var(--border-color)',
-                                        color: 'var(--text-primary)',
-                                    }}
-                                />
+                        {/* Email field — only show for full login */}
+                        {!quickMode && (
+                            <div className="space-y-1.5">
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>
+                                    Email Address
+                                </label>
+                                <div className="relative group">
+                                    <Mail
+                                        size={16}
+                                        className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors"
+                                        style={{ color: 'var(--text-muted)' }}
+                                    />
+                                    <input
+                                        type="email"
+                                        required
+                                        autoComplete="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="admin@expertoffice.com"
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-medium border transition-all duration-200 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/15"
+                                        style={{
+                                            backgroundColor: 'var(--bg-tertiary)',
+                                            borderColor: 'var(--border-color)',
+                                            color: 'var(--text-primary)',
+                                        }}
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Password field */}
                         <div className="space-y-1.5">
@@ -141,6 +175,7 @@ const AdminLogin = () => {
                                     type={showPassword ? 'text' : 'password'}
                                     required
                                     autoComplete="current-password"
+                                    autoFocus={quickMode}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
@@ -182,16 +217,34 @@ const AdminLogin = () => {
                                     Authenticating...
                                 </>
                             ) : (
-                                'Sign In'
+                                <>
+                                    <LogIn size={16} />
+                                    {quickMode ? 'Sign Back In' : 'Sign In'}
+                                </>
                             )}
                         </button>
                     </form>
 
                     {/* Footer */}
-                    <div className="px-8 pb-6 text-center">
-                        <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-                            Restricted access — authorised personnel only
-                        </p>
+                    <div className="px-8 pb-6 text-center space-y-3">
+                        {quickMode ? (
+                            <button
+                                onClick={switchAccount}
+                                className="flex items-center justify-center gap-2 mx-auto px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all duration-200 hover:scale-[1.02]"
+                                style={{
+                                    color: 'var(--text-muted)',
+                                    backgroundColor: 'var(--bg-tertiary)',
+                                    border: '1px solid var(--border-color)'
+                                }}
+                            >
+                                <UserX size={14} />
+                                Log into a different account
+                            </button>
+                        ) : (
+                            <p className="text-[10px] font-medium uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
+                                Restricted access — authorised personnel only
+                            </p>
+                        )}
                     </div>
                 </div>
 

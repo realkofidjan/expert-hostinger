@@ -284,7 +284,9 @@ const Profile = () => {
       case 'pending': return { label: 'Pending', color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20', icon: <Clock className="w-4 h-4" /> };
       case 'confirmed': return { label: 'Confirmed', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20', icon: <CheckCircle className="w-4 h-4" /> };
       case 'processing': return { label: 'Processing', color: 'bg-purple-500/10 text-purple-600 border-purple-500/20', icon: <Package className="w-4 h-4" /> };
-      case 'en_route': return { label: 'On the Way', color: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20', icon: <Truck className="w-4 h-4" /> };
+      case 'en_route': case 'on_route': return { label: 'On the Way', color: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20', icon: <Truck className="w-4 h-4" /> };
+      case 'ready_for_pickup': return { label: 'Ready for Pickup', color: 'bg-teal-500/10 text-teal-600 border-teal-500/20', icon: <Store className="w-4 h-4" /> };
+      case 'collected': return { label: 'Collected', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', icon: <CheckCircle className="w-4 h-4" /> };
       case 'delivered': return { label: 'Delivered', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', icon: <CheckCircle className="w-4 h-4" /> };
       case 'cancelled': return { label: 'Cancelled', color: 'bg-red-500/10 text-red-600 border-red-500/20', icon: <X className="w-4 h-4" /> };
       default: return { label: status || 'Pending', color: 'bg-gray-500/10 text-gray-500 border-gray-500/20', icon: <Clock className="w-4 h-4" /> };
@@ -592,17 +594,17 @@ const Profile = () => {
                         { key: 'pending', label: 'Order Placed', icon: ShoppingBag },
                         { key: 'confirmed', label: 'Confirmed', icon: CheckCircle },
                         { key: 'processing', label: 'Being Prepared', icon: Package },
-                        { key: 'delivered', label: 'Ready / Collected', icon: Store },
+                        { key: 'ready_for_pickup', label: 'Ready for Pickup', icon: Store },
+                        { key: 'collected', label: 'Collected', icon: ShieldCheck },
                       ];
-                    const order = ['pending', 'confirmed', 'processing', 'on_route', 'delivered'];
-                    const currentIdx = order.indexOf(selectedOrder.status);
+                    const stepKeys = steps.map(s => s.key);
+                    const currentIdx = stepKeys.indexOf(selectedOrder.status);
                     return (
                       <div className="mt-8 mb-2">
                         <div className="flex items-center">
                           {steps.map((step, i) => {
-                            const stepOrderIdx = order.indexOf(step.key);
-                            const done = stepOrderIdx < currentIdx || (stepOrderIdx === currentIdx);
-                            const active = stepOrderIdx === currentIdx;
+                            const done = i <= currentIdx;
+                            const active = i === currentIdx;
                             const Icon = step.icon;
                             return (
                               <React.Fragment key={step.key}>
@@ -616,7 +618,7 @@ const Profile = () => {
                                     }`}>{step.label}</span>
                                 </div>
                                 {i < steps.length - 1 && (
-                                  <div className={`flex-1 h-0.5 mx-1 mb-5 transition-colors ${order.indexOf(steps[i + 1].key) <= currentIdx ? 'bg-green-500' : 'bg-gray-100 dark:bg-gray-800'
+                                  <div className={`flex-1 h-0.5 mx-1 mb-5 transition-colors ${(i + 1) <= currentIdx ? 'bg-green-500' : 'bg-gray-100 dark:bg-gray-800'
                                     }`} />
                                 )}
                               </React.Fragment>

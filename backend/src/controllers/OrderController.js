@@ -251,7 +251,7 @@ const OrderController = {
     const { id } = req.params;
     const { status, payment_status, estimated_delivery_date, delivery_notes } = req.body;
 
-    const validStatuses = ['pending', 'confirmed', 'processing', 'on_route', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'confirmed', 'processing', 'on_route', 'delivered', 'ready_for_pickup', 'collected', 'cancelled'];
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid order status' });
     }
