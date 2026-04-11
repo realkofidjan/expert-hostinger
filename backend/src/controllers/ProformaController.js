@@ -178,7 +178,7 @@ const ProformaController = {
       res.json({ message: 'Proforma sent successfully with premium attachment' });
     } catch (error) {
       console.error('SEND_PROFORMA_ERROR:', error);
-      res.status(500).json({ error: 'Failed to generate or send proforma' });
+      res.status(500).json({ error: 'Failed to complete sequence', details: error.message });
     }
   },
 
