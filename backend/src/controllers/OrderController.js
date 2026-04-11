@@ -323,14 +323,15 @@ const OrderController = {
 
   getMyOrders: async (req, res) => {
     try {
+      const userId = req.user.id;
       const email = req.user.email;
       const [orders] = await db.query(`
         SELECT o.*,
           (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS items_count
         FROM orders o
-        WHERE LOWER(o.customer_email) = LOWER(?)
+        WHERE o.user_id = ? OR LOWER(o.customer_email) = LOWER(?)
         ORDER BY o.created_at DESC
-      `, [email]);
+      `, [userId, email]);
       res.json(orders);
     } catch (err) {
       console.error('GET_MY_ORDERS_ERROR:', err);
