@@ -46,6 +46,8 @@ const DeliveryController = require('./src/controllers/DeliveryController');
 const AddressController = require('./src/controllers/AddressController');
 const { NotificationController } = require('./src/controllers/NotificationController');
 const WishlistController = require('./src/controllers/WishlistController');
+const ReviewController = require('./src/controllers/ReviewController');
+const FinanceController = require('./src/controllers/FinanceController');
 const ProjectsController = require('./src/controllers/ProjectsController');
 const ProformaController = require('./src/controllers/ProformaController');
 const { exportBackup, restoreBackup } = require('./src/controllers/BackupController');
@@ -171,6 +173,7 @@ app.delete('/api/admin/blogs/:id', protect, authorize('admin', 'sub-admin'), Blo
 app.get('/api/my-orders', protect, OrderController.getMyOrders);
 app.get('/api/admin/orders', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.getAllOrders);
 app.get('/api/admin/orders/:id', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.getOrderById);
+app.post('/api/admin/orders', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.adminCreateOrder);
 app.post('/api/orders', optionalProtect, OrderController.createOrder);
 app.get('/api/orders/lookup', OrderController.lookupOrder);
 app.get('/api/orders/:orderNumber/details', OrderController.getOrderDetails);
@@ -191,7 +194,14 @@ app.put('/api/admin/delivery-regions/:id', protect, authorize('admin'), Delivery
 app.get('/api/my-addresses', protect, AddressController.getMyAddresses);
 app.post('/api/my-addresses', protect, AddressController.saveAddress);
 
-// ── Wishlist ──────────────────────────────────────────────────────────────────
+// ── Wishlist & Reviews ────────────────────────────────────────────────────────
+app.get('/api/reviews/product/:productId', ReviewController.getProductReviews);
+app.post('/api/reviews', protect, ReviewController.submitReview);
+app.get('/api/admin/reviews', protect, authorize('admin', 'sub-admin'), ReviewController.getAllReviewsAdmin);
+app.delete('/api/admin/reviews/:id', protect, authorize('admin', 'sub-admin'), ReviewController.deleteReviewAdmin);
+
+app.get('/api/admin/finance', protect, authorize('admin', 'sub-admin', 'staff'), FinanceController.getFinanceStats);
+
 app.get('/api/wishlist', protect, WishlistController.getWishlist);
 app.post('/api/wishlist/toggle', protect, WishlistController.toggleWishlist);
 app.get('/api/wishlist/check/:productId', protect, WishlistController.checkWishlist);

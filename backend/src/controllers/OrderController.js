@@ -221,6 +221,99 @@ const OrderController = {
     }
   },
 
+  adminCreateOrder: async (req, res) => {
+    // For manual/offline orders entered by staff
+    let body = req.body;
+    
+    // Support formData just in case
+    if (typeof body.items === 'string') {
+      try { body.items = JSON.parse(body.items); } catch { }
+    }
+
+    const { customer_name, customer_email, customer_phone, items, payment_method, delivery_mode, status, payment_status, shipping_address } = body;
+
+    if (!customer_name || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Customer name and items are required' });
+    }
+
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+    try {
+      const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.unit_price) * parseInt(item.quantity)), 0);
+      const fee = parseFloat(body.delivery_fee || 0);
+      const total = subtotal + fee;
+      const orderNumber = generateOrderNumber();
+
+      const [orderResult] = await connection.query(`
+        INSERT INTO orders (
+          order_number, customer_name, customer_email, customer_phone,
+          payment_method, delivery_mode, delivery_fee, 
+          subtotal, total_amount, status, payment_status, shipping_address
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        orderNumber, customer_name, customer_email || 'offline@expertoffice.com', customer_phone || null,
+        payment_method || 'cash', delivery_mode || 'pickup', fee,
+        subtotal, total, status || 'collected', payment_status || 'paid', shipping_address || null
+      ]);
+
+      const orderId = orderResult.insertId;
+
+      for (const item of items) {
+        const qty = parseInt(item.quantity);
+        const price = parseFloat(item.unit_price);
+        const variantName = item.variant;
+
+        let stockAvailable = 0;
+        let variantId = null;
+
+        if (variantName) {
+          const [variants] = await connection.query(
+            'SELECT id, stock_quantity FROM product_variants WHERE product_id = ? AND color_name = ?',
+            [item.product_id, variantName]
+          );
+          if (variants.length > 0) {
+            stockAvailable = variants[0].stock_quantity;
+            variantId = variants[0].id;
+          } else {
+            const [products] = await connection.query('SELECT stock FROM products WHERE id = ?', [item.product_id]);
+            stockAvailable = products[0]?.stock || 0;
+          }
+        } else {
+          const [products] = await connection.query('SELECT stock FROM products WHERE id = ?', [item.product_id]);
+          stockAvailable = products[0]?.stock || 0;
+        }
+
+        // Auto deduct stock and insert order
+        await connection.query(`
+          INSERT INTO order_items (order_id, product_id, variant_id, color, quantity, unit_price, subtotal)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [orderId, item.product_id, variantId, variantName || null, qty, price, qty * price]);
+
+        if (variantId) {
+          await connection.query('UPDATE product_variants SET stock_quantity = stock_quantity - ? WHERE id = ?', [qty, variantId]);
+        }
+        await connection.query('UPDATE products SET stock = stock - ? WHERE id = ?', [qty, item.product_id]);
+      }
+
+      await connection.commit();
+      
+      const { createNotification } = require('./NotificationController');
+      await createNotification(
+        'Offline Order Logged',
+        `An offline order (#${orderNumber}) was manually logged for ${customer_name}. Total: GHS ${total.toLocaleString()}`,
+        'SYSTEM'
+      ).catch(err => console.error("Could not notify admin regarding offline order:", err));
+
+      res.status(201).json({ orderId, orderNumber, message: 'Offline order recorded successfully.' });
+    } catch (error) {
+      await connection.rollback();
+      console.error('ADMIN_CREATE_ORDER_ERROR:', error);
+      res.status(500).json({ error: error.message });
+    } finally {
+      connection.release();
+    }
+  },
+
   getOrderDetails: async (req, res) => {
     const { orderNumber } = req.params;
     const { email } = req.query;

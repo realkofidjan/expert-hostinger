@@ -25,7 +25,8 @@ import {
   ShoppingBag,
   Upload,
   CheckCheck,
-  FolderOpen
+  FolderOpen,
+  BarChart3
 } from 'lucide-react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -204,6 +205,7 @@ const AdminLayout = ({ children }) => {
     { name: 'Products',           icon: <Package size={20} />,         path: '/admin/products' },
     { name: 'Discounts & Coupons',icon: <Tag size={20} />,             path: '/admin/discounts',  permission: 'manageDiscounts' },
     { name: 'Orders',             icon: <ShoppingCart size={20} />,    path: '/admin/orders' },
+    { name: 'Finance',            icon: <BarChart3 size={20} />,       path: '/admin/finance',    permission: 'manageOrders' },
     { name: 'Proforma',           icon: <ClipboardCheck size={20} />,  path: '/admin/proforma' },
     { name: 'Content',            icon: <FileText size={20} />,        path: '/admin/blogs',      permission: 'manageContent' },
     { name: 'Projects',           icon: <FolderOpen size={20} />,      path: '/admin/projects',   permission: 'manageContent' },

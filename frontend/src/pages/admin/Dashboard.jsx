@@ -30,6 +30,8 @@ const Dashboard = () => {
     pendingOrders: 0,
     lowStockCount: 0,
     lowStockProducts: [],
+    financials: { totalRevenue: 0, thisMonthRevenue: 0 },
+    bestSellingProducts: [],
     storage: { used: 0, limit: 1, percent: 0 }
   });
 
@@ -82,6 +84,8 @@ const Dashboard = () => {
         pendingOrders: data.pendingOrders || 0,
         lowStockCount: data.lowStockCount || 0,
         lowStockProducts: data.lowStockProducts || [],
+        financials: data.financials || { totalRevenue: 0, thisMonthRevenue: 0 },
+        bestSellingProducts: data.bestSellingProducts || [],
         storage: data.storage || { used: 0, limit: 1, percent: 0 }
       });
 
@@ -95,7 +99,7 @@ const Dashboard = () => {
   };
 
   const statCards = [
-    { title: 'Total Orders', value: stats.totalOrders, icon: <ShoppingCart />, color: 'from-blue-500 to-indigo-600' },
+    { title: 'Total Revenue', value: `GHS ${parseFloat(stats.financials.totalRevenue).toLocaleString()}`, icon: <TrendingUp />, color: 'from-blue-500 to-indigo-600' },
     { title: 'Customers', value: stats.totalCustomers, icon: <Users />, color: 'from-green-500 to-emerald-600' },
     { title: 'Pending Orders', value: stats.pendingOrders, icon: <Clock />, color: 'from-yellow-400 to-orange-500' },
     { title: 'Storage Used', value: `${stats.storage.percent}%`, icon: <HardDrive />, color: 'from-red-500 to-orange-600' },
@@ -233,6 +237,37 @@ const Dashboard = () => {
                       <div className="text-right shrink-0 ml-4">
                         <p className="text-xs font-black text-red-500">{product.stock}</p>
                         <p className="text-[8px] text-[var(--text-muted)] uppercase font-bold">In Stock</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Best Selling Products */}
+            <div className="glass rounded-3xl p-6 bg-blue-500/[0.02]">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-lg flex items-center gap-2 text-[var(--text-primary)]">
+                  <ShoppingCart size={20} className="text-blue-500" />
+                  Best Sellers
+                </h3>
+              </div>
+
+              <div className="space-y-3">
+                {stats.bestSellingProducts?.length === 0 ? (
+                  <div className="py-4 text-center text-[var(--text-muted)] text-xs font-bold uppercase tracking-widest opacity-50">
+                    No sales data yet
+                  </div>
+                ) : (
+                  stats.bestSellingProducts?.map((product) => (
+                    <div key={product.id} className="flex items-center justify-between p-3 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] hover:border-blue-500/30 transition-all group">
+                      <div className="flex-1 overflow-hidden">
+                        <p className="text-sm font-bold text-[var(--text-primary)] truncate transition-colors capitalize tracking-tight">{product.name}</p>
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-black line-clamp-1">{product.sold_qty} sold</p>
+                      </div>
+                      <div className="text-right shrink-0 ml-4">
+                        <p className="text-xs font-black text-[var(--text-primary)]">₵{parseFloat(product.total_revenue).toLocaleString()}</p>
+                        <p className="text-[8px] text-[var(--text-muted)] uppercase font-bold">Revenue</p>
                       </div>
                     </div>
                   ))

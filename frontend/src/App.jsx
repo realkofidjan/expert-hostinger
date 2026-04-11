@@ -12,6 +12,7 @@ import PublicProducts from './pages/PublicProducts';
 import AdminLogin from './pages/admin/AdminLogin';
 import Dashboard from './pages/admin/Dashboard';
 import Orders from './pages/admin/Orders';
+import Finance from './pages/admin/Finance';
 import Products from './pages/admin/Products';
 import Users from './pages/admin/Users';
 import Categories from './pages/admin/Categories';
@@ -133,6 +134,7 @@ function App() {
                           <Route path="products" element={<Products />} />
                           <Route path="discounts" element={<Discounts />} />
                           <Route path="orders" element={<Orders />} />
+                          <Route path="finance" element={<Finance />} />
                           <Route path="proforma" element={<Proforma />} />
                           <Route path="users" element={<Users />} />
                           <Route path="blogs" element={<Blogs />} />

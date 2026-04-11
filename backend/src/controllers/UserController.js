@@ -82,6 +82,9 @@ const getStats = async (req, res) => {
             [lowStockProducts],
             [lowStockCount],
             [recentOrders],
+            [revenueTotal],
+            [revenueMonth],
+            [bestSellingProducts],
         ] = await Promise.all([
             db.query('SELECT COUNT(*) as count FROM users'),
             db.query('SELECT COUNT(*) as count FROM users WHERE role = "customer"'),
@@ -105,6 +108,28 @@ const getStats = async (req, res) => {
                 ORDER BY o.created_at DESC
                 LIMIT 5
             `),
+            db.query(`
+                SELECT COALESCE(SUM(total_amount), 0) as total
+                FROM orders
+                WHERE payment_status IN ('paid', 'verified')
+            `),
+            db.query(`
+                SELECT COALESCE(SUM(total_amount), 0) as total
+                FROM orders
+                WHERE payment_status IN ('paid', 'verified')
+                AND MONTH(created_at) = MONTH(CURRENT_DATE())
+                AND YEAR(created_at) = YEAR(CURRENT_DATE())
+            `),
+            db.query(`
+                SELECT p.id, p.name, p.primary_image, SUM(oi.quantity) as sold_qty, SUM(oi.subtotal) as total_revenue
+                FROM order_items oi
+                JOIN products p ON oi.product_id = p.id
+                JOIN orders o ON oi.order_id = o.id
+                WHERE o.payment_status IN ('paid', 'verified')
+                GROUP BY p.id
+                ORDER BY sold_qty DESC
+                LIMIT 5
+            `),
         ]);
 
         const storage = _storageCache;
@@ -120,6 +145,11 @@ const getStats = async (req, res) => {
             lowStockProducts,
             lowStockCount: lowStockCount[0].count,
             recentOrders,
+            financials: {
+                totalRevenue: revenueTotal[0].total,
+                thisMonthRevenue: revenueMonth[0].total
+            },
+            bestSellingProducts
         });
     } catch (error) {
         console.error('GET_STATS_ERROR:', error);
