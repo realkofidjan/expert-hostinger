@@ -13,6 +13,7 @@ import { getImageUrl } from '../../utils/url';
 
 const DELIVERY_STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'on_route', 'delivered', 'cancelled'];
 const PICKUP_STATUS_OPTIONS = ['pending', 'confirmed', 'processing', 'ready_for_pickup', 'collected', 'cancelled'];
+const ALL_STATUS_OPTIONS = Array.from(new Set([...DELIVERY_STATUS_OPTIONS, ...PICKUP_STATUS_OPTIONS]));
 
 const statusColor = (s) => {
   switch (s) {
@@ -366,7 +367,7 @@ const Orders = () => {
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
               className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl py-2 px-3 text-sm focus:border-green-500 text-[var(--text-primary)]">
               <option value="all">All Status</option>
-              {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' ')}</option>)}
+              {ALL_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1).replace('_', ' ')}</option>)}
             </select>
             <select value={filterPayment} onChange={e => setFilterPayment(e.target.value)}
               className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl py-2 px-3 text-sm focus:border-green-500 text-[var(--text-primary)]">
