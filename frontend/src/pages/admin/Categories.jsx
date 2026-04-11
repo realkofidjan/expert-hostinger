@@ -29,7 +29,7 @@ const Categories = () => {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/categories');
+      const response = await api.get(`/categories?_t=${Date.now()}`);
       setCategories(response.data);
     } catch (err) {
       toast.error('Failed to load categories');

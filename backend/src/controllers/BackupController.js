@@ -80,7 +80,12 @@ const restoreBackup = async (req, res) => {
           }
         }
         
-        zip.extractEntryTo('assets/', targetDir, true, true);
+        // zip.extractEntryTo('assets/', targetDir, true, true);
+        for (const entry of zipEntries) {
+          if (entry.entryName.startsWith('assets/') && !entry.isDirectory) {
+            zip.extractEntryTo(entry.entryName, targetDir, true, true);
+          }
+        }
         results.push({ area: 'assets', status: 'restored' });
       }
     } catch (err) {

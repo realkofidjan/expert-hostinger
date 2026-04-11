@@ -220,6 +220,7 @@ app.post('/api/admin/sales', protect, authorize('admin', 'sub-admin'), SaleContr
 // ── Proforma ──────────────────────────────────────────────────────────────────
 app.get('/api/admin/proforma', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.getAll);
 app.post('/api/admin/proforma', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.create);
+app.put('/api/admin/proforma/:id', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.update);
 app.post('/api/admin/proforma/:id/send', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.sendByEmail);
 app.get('/api/admin/proforma/:id/download', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.downloadPdf);
 app.delete('/api/admin/proforma/:id', protect, authorize('admin', 'sub-admin'), ProformaController.delete);
