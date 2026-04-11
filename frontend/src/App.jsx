@@ -63,8 +63,8 @@ const ScrollToTop = () => {
 
 // Auth Guard — allows admin and staff
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('admin_user') || localStorage.getItem('user') || '{}');
   const role = (user.role || '').toLowerCase();
 
   if (!token) return <Navigate to="/admin/login" replace />;

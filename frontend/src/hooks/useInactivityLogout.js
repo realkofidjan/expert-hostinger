@@ -33,8 +33,8 @@ export const useInactivityLogout = () => {
 
       logoutTimer.current = setTimeout(() => {
         clearTimers();
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
         toast.dismiss();
         toast.info('You were logged out due to inactivity.');
         navigate('/admin/login');

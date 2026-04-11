@@ -73,7 +73,7 @@ const AdminLayout = ({ children }) => {
   const [utilsExpanded, setUtilsExpanded] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = JSON.parse(localStorage.getItem('admin_user') || localStorage.getItem('user') || '{}');
   const { can } = useRole();
 
   useInactivityLogout();
@@ -214,8 +214,8 @@ const AdminLayout = ({ children }) => {
   const menuItems = allMenuItems.filter(item => !item.permission || can(item.permission));
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
     navigate('/admin/login');
   };
 

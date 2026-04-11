@@ -32,7 +32,7 @@ const getImageUrl = (path) => {
 };
 
 const Proforma = () => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = JSON.parse(localStorage.getItem('admin_user') || localStorage.getItem('user') || '{}');
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('list'); // 'list' or 'create'

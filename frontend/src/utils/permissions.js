@@ -51,7 +51,7 @@ export const getPermissions = (role) => {
 };
 
 export const useRole = () => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = JSON.parse(localStorage.getItem('admin_user') || localStorage.getItem('user') || '{}');
   const role = (user.role || '').toLowerCase();
   const permissions = getPermissions(role);
   return {

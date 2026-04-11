@@ -23,8 +23,8 @@ const AdminLogin = () => {
             const { token, user } = response.data;
             const userRole = (user.role || '').toLowerCase();
             if (['admin', 'staff', 'sub-admin'].includes(userRole)) {
-                localStorage.setItem('token', token);
-                localStorage.setItem('user', JSON.stringify(user));
+                localStorage.setItem('admin_token', token);
+                localStorage.setItem('admin_user', JSON.stringify(user));
                 toast.success('Welcome back!', { theme: isDark ? 'dark' : 'light' });
                 setTimeout(() => navigate('/admin'), 900);
             } else {
