@@ -40,8 +40,9 @@ const createBrand = async (req, res) => {
             const { relativeDir, absoluteDir } = getAssetPath('brands');
             const filename = `${Date.now()}-${req.file.originalname.replace(/\s+/g, '_')}`;
             const absolutePath = path.join(absoluteDir, filename);
-            await optimizeImage(req.file.buffer, absolutePath);
-            logoPath = `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
+            const savedPath = await optimizeImage(req.file.buffer, absolutePath);
+            const savedFilename = path.basename(savedPath);
+            logoPath = `/assets/${relativeDir}/${savedFilename}`.replace(/\\/g, '/');
         }
 
         const brandId = await Brand.create({
@@ -103,8 +104,9 @@ const updateBrand = async (req, res) => {
             const { relativeDir, absoluteDir } = getAssetPath('brands');
             const filename = `${Date.now()}-${req.file.originalname.replace(/\s+/g, '_')}`;
             const absolutePath = path.join(absoluteDir, filename);
-            await optimizeImage(req.file.buffer, absolutePath);
-            logoPath = `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
+            const savedPath = await optimizeImage(req.file.buffer, absolutePath);
+            const savedFilename = path.basename(savedPath);
+            logoPath = `/assets/${relativeDir}/${savedFilename}`.replace(/\\/g, '/');
         }
 
         const success = await Brand.update(id, {

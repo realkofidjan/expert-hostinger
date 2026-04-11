@@ -135,9 +135,11 @@ const createProduct = async (req, res) => {
                 const file = req.files[i];
                 const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
                 const absolutePath = path.join(absoluteDir, filename);
-                const relativePath = `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
 
-                await optimizeImage(file.buffer, absolutePath);
+                const savedPath = await optimizeImage(file.buffer, absolutePath);
+                const savedFilename = path.basename(savedPath);
+                const relativePath = `/assets/${relativeDir}/${savedFilename}`.replace(/\\/g, '/');
+
                 // Set first image as primary by default
                 imageRecords.push({ url: relativePath, is_primary: i === 0 ? 1 : 0 });
             }
@@ -239,9 +241,11 @@ const updateProduct = async (req, res) => {
                 const file = req.files[i];
                 const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
                 const absolutePath = path.join(absoluteDir, filename);
-                const relativePath = `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
 
-                await optimizeImage(file.buffer, absolutePath);
+                const savedPath = await optimizeImage(file.buffer, absolutePath);
+                const savedFilename = path.basename(savedPath);
+                const relativePath = `/assets/${relativeDir}/${savedFilename}`.replace(/\\/g, '/');
+
                 // Set as primary only if no primary exists and it's the first in this batch
                 imageRecords.push({ url: relativePath, is_primary: (!hasPrimary && i === 0) ? 1 : 0 });
             }

@@ -52,8 +52,9 @@ const saveImages = async (files, projectId) => {
     const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
     const filename = `${Date.now()}-${i}${ext}`;
     const absolutePath = path.join(absoluteDir, filename);
-    await optimizeImage(file.buffer, absolutePath);
-    urls.push(`/assets/${relativeDir}/${filename}`.replace(/\\/g, '/'));
+    const savedPath = await optimizeImage(file.buffer, absolutePath);
+    const savedFilename = path.basename(savedPath);
+    urls.push(`/assets/${relativeDir}/${savedFilename}`.replace(/\\/g, '/'));
   }
   return urls;
 };

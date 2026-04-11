@@ -27,8 +27,9 @@ const saveFile = async (file, subdir = '') => {
     const { relativeDir, absoluteDir } = getAssetPath('content', subdir);
     const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
     const absolutePath = path.join(absoluteDir, filename);
-    await optimizeImage(file.buffer, absolutePath);
-    return `/assets/${relativeDir}/${filename}`.replace(/\\/g, '/');
+    const savedPath = await optimizeImage(file.buffer, absolutePath);
+    const savedFilename = path.basename(savedPath);
+    return `/assets/${relativeDir}/${savedFilename}`.replace(/\\/g, '/');
 };
 
 const attachGallery = async (blogs) => {
