@@ -17,12 +17,24 @@ const protect = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        // Attach user info to request
-        req.user = decoded;
+        // Fetch the latest user data from DB to ensure role/status is current
+        const User = require('../models/User');
+        const freshUser = await User.findById(decoded.id);
 
-        // Note: You should ideally fetch the latest status from DB here 
-        // to ensure the user wasn't suspended since the token was issued.
-        // For now, we'll assume the controller handles fresh DB checks for sensitive actions.
+        if (!freshUser) {
+            return res.status(401).json({ error: 'User no longer exists' });
+        }
+
+        if (freshUser.status === 'suspended') {
+            return res.status(403).json({ error: 'Your account has been suspended' });
+        }
+
+        // Attach fresh user info (not stale JWT data)
+        req.user = {
+            id: freshUser.id,
+            email: freshUser.email,
+            role: freshUser.role
+        };
         
         next();
     } catch (error) {
