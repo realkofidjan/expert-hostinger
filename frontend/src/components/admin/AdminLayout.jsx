@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   ShoppingCart,
-  MessageSquare,
   Users as UsersIcon,
   Package,
   LogOut,
@@ -33,6 +32,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useTheme } from '../../context/ThemeContext';
 import { useInactivityLogout } from '../../hooks/useInactivityLogout';
 import { useRole } from '../../utils/permissions';
+import { useSocket } from '../../context/SocketContext';
+import { toast } from 'react-toastify';
 import api from '../../api';
 
 const TYPE_ROUTES = {
@@ -114,6 +115,31 @@ const AdminLayout = ({ children }) => {
     return () => clearInterval(notifPollRef.current);
   }, []);
 
+  // Real-time push notifications via Socket.IO
+  const socket = useSocket();
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (data) => {
+      // Increment unread count instantly
+      setUnreadCount(prev => prev + 1);
+      // Refresh full list
+      fetchNotifications();
+      // Show toast
+      toast.info(data?.title || 'New notification', {
+        icon: '🔔',
+        autoClose: 5000,
+      });
+      // Play chime
+      try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ==');
+        audio.volume = 0.3;
+        audio.play().catch(() => {});
+      } catch {}
+    };
+    socket.on('admin:notification', handler);
+    return () => socket.off('admin:notification', handler);
+  }, [socket]);
+
   const handleNotifClick = async (notif) => {
     if (!notif.is_read) {
       try {
@@ -179,7 +205,6 @@ const AdminLayout = ({ children }) => {
     { name: 'Discounts & Coupons',icon: <Tag size={20} />,             path: '/admin/discounts',  permission: 'manageDiscounts' },
     { name: 'Orders',             icon: <ShoppingCart size={20} />,    path: '/admin/orders' },
     { name: 'Proforma',           icon: <ClipboardCheck size={20} />,  path: '/admin/proforma' },
-    { name: 'Inquiries',          icon: <MessageSquare size={20} />,   path: '/admin/inquiries' },
     { name: 'Content',            icon: <FileText size={20} />,        path: '/admin/blogs',      permission: 'manageContent' },
     { name: 'Projects',           icon: <FolderOpen size={20} />,      path: '/admin/projects',   permission: 'manageContent' },
     { name: 'Logs',               icon: <ClipboardList size={20} />,   path: '/admin/logs' },
@@ -442,8 +467,17 @@ const AdminLayout = ({ children }) => {
                             onClick={() => handleNotifClick(n)}
                             className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[var(--bg-secondary)] transition-colors border-b border-[var(--border-color)] last:border-0 ${!n.is_read ? 'bg-green-500/5' : ''}`}
                           >
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${n.type === 'new_order' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                              {n.type === 'new_order' ? <ShoppingBag size={14} /> : <Upload size={14} />}
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                              n.type === 'new_order' ? 'bg-green-500/10 text-green-500' :
+                              n.type === 'new_quote' || n.type === 'quote_approved' ? 'bg-purple-500/10 text-purple-500' :
+                              n.type === 'new_inquiry' ? 'bg-orange-500/10 text-orange-500' :
+                              n.type === 'new_user' ? 'bg-cyan-500/10 text-cyan-500' :
+                              'bg-blue-500/10 text-blue-500'
+                            }`}>
+                              {n.type === 'new_order' ? <ShoppingBag size={14} /> :
+                               n.type === 'new_user' ? <UsersIcon size={14} /> :
+                               n.type === 'new_quote' || n.type === 'quote_approved' ? <ClipboardList size={14} /> :
+                               <Bell size={14} />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className={`text-xs font-bold truncate ${!n.is_read ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>{n.title}</p>

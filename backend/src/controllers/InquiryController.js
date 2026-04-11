@@ -1,4 +1,6 @@
 const db = require('../config/db');
+const { createNotification } = require('./NotificationController');
+const { getIo } = require('../utils/socket');
 
 const InquiryController = {
     // Get all inquiries (general contact)
@@ -68,6 +70,17 @@ const InquiryController = {
                 'INSERT INTO inquiries (name, email, phone, subject, message, product_id, status, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [name, email, phone, subject, message, product_id, 'unread', userId]
             );
+
+            // Notify admins
+            await createNotification(
+                'new_inquiry',
+                `New Contact Inquiry from ${name}`,
+                `${name} (${email}) sent a message: "${(message || '').slice(0, 80)}..."`,
+                null, null
+            );
+            const io = getIo();
+            if (io) io.emit('admin:notification', { type: 'new_inquiry', title: `New inquiry from ${name}` });
+
             res.status(201).json({ message: 'Inquiry submitted successfully', inquiryId: result.insertId });
         } catch (err) {
             console.error('CREATE_INQUIRY_ERROR:', err);

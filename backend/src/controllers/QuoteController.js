@@ -1,4 +1,6 @@
 const db = require('../config/db');
+const { createNotification } = require('./NotificationController');
+const { getIo } = require('../utils/socket');
 
 const QuoteController = {
     // Get all quotes (with items count)
@@ -112,6 +114,16 @@ const QuoteController = {
                 [req.user.id, 'APPROVE_QUOTE', `User approved quote ID: ${id}`]
             );
 
+            // Notify admins
+            await createNotification(
+                'quote_approved',
+                `Quote #${id} Approved by Customer`,
+                `${req.user.email} has approved quote #${id}. Ready for processing.`,
+                null, null
+            );
+            const io = getIo();
+            if (io) io.emit('admin:notification', { type: 'quote_approved', title: `Quote #${id} approved by customer` });
+
             res.json({ message: 'Quote approved! It is now being processed as an order.' });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -210,6 +222,17 @@ const QuoteController = {
             }
 
             await connection.commit();
+
+            // Notify admins
+            await createNotification(
+                'new_quote',
+                `New Quote Request from ${name}`,
+                `${name} (${email}) requested a quote with ${(items || []).length} item(s)`,
+                null, null
+            );
+            const io = getIo();
+            if (io) io.emit('admin:notification', { type: 'new_quote', title: `New quote request from ${name}` });
+
             res.status(201).json({ message: 'Quote request submitted successfully', quoteId });
         } catch (err) {
             await connection.rollback();

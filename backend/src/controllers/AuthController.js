@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
+const { createNotification } = require('./NotificationController');
+const { getIo } = require('../utils/socket');
 
 const logPath = path.join(__dirname, '../../auth_debug.log');
 const logToFile = (message) => {
@@ -36,6 +38,16 @@ const register = async (req, res) => {
             password: hashedPassword,
             role: 'customer'
         });
+
+        // Notify admins
+        await createNotification(
+            'new_user',
+            `New Customer Registration`,
+            `${full_name || email} just created an account`,
+            null, null
+        );
+        const io = getIo();
+        if (io) io.emit('admin:notification', { type: 'new_user', title: `New customer: ${full_name || email}` });
 
         res.status(201).json({ message: 'User registered successfully', userId });
     } catch (error) {

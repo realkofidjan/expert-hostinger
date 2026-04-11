@@ -17,7 +17,9 @@ import {
   Trash,
   Package,
   ArrowLeft,
-  Edit3
+  Edit3,
+  Send,
+  Eye
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -38,6 +40,8 @@ const Proforma = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [sendPreview, setSendPreview] = useState(null);
+  const [sending, setSending] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -225,19 +229,7 @@ const Proforma = () => {
         const res = await api.post('/admin/proforma', payload);
         proformaId = res.data.id;
         invoiceNumber = res.data.invoice_number;
-        toast.success(`Proforma ${invoiceNumber} created`);
-      }
-      
-      // Automatically send email if email is provided
-      if (formData.client_email) {
-        toast.info(`Generating and delivering official document...`);
-        try {
-          await api.post(`/admin/proforma/${proformaId}/send`);
-          toast.success('Official Proforma delivered to client');
-        } catch (err) {
-          console.error('DELIVERY_ERROR:', err);
-          toast.warn('Invoice saved but delivery failed. Check SMTP or client email.');
-        }
+        toast.success(`Proforma ${invoiceNumber} created — use the Send button to deliver it`);
       }
 
       setView('list');
@@ -258,6 +250,21 @@ const Proforma = () => {
       fetchInvoices();
     } catch {
       toast.error('Failed to delete invoice');
+    }
+  };
+
+  const handleSend = async () => {
+    if (!sendPreview) return;
+    setSending(true);
+    try {
+      await api.post(`/admin/proforma/${sendPreview.id}/send`);
+      toast.success(`Proforma ${sendPreview.invoice_number} delivered to ${sendPreview.client_email}`);
+      setSendPreview(null);
+    } catch (err) {
+      const detail = err.response?.data?.details || '';
+      toast.error(`Delivery failed: ${detail || 'Check SMTP configuration'}`);
+    } finally {
+      setSending(false);
     }
   };
 
@@ -580,6 +587,15 @@ const Proforma = () => {
                             >
                               <Trash size={18} />
                             </button>
+                            {inv.client_email && (
+                              <button
+                                onClick={() => setSendPreview(inv)}
+                                className="p-2.5 bg-yellow-500/10 text-yellow-500 rounded-xl hover:bg-yellow-500 hover:text-white transition-all shadow-lg hover:shadow-yellow-500/20"
+                                title="Preview & Send Email"
+                              >
+                                <Send size={18} />
+                              </button>
+                            )}
                          </div>
                       </td>
                     </tr>
@@ -590,6 +606,66 @@ const Proforma = () => {
           </div>
         </div>
       </div>
+
+      {/* Send Preview Modal */}
+      {sendPreview && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={() => !sending && setSendPreview(null)}>
+          <div className="bg-[var(--bg-primary)] rounded-[2rem] border border-[var(--border-color)] w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-[var(--border-color)] flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-[var(--text-primary)]">Email Preview</h3>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Review before sending to the client</p>
+              </div>
+              <button onClick={() => setSendPreview(null)} className="p-2 hover:bg-[var(--bg-secondary)] rounded-xl transition-colors text-[var(--text-muted)]">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] w-16 shrink-0">To:</span>
+                  <span className="text-sm font-bold text-[var(--text-primary)]">{sendPreview.client_email}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] w-16 shrink-0">Subject:</span>
+                  <span className="text-sm font-bold text-[var(--text-primary)]">[Expert Office Furnish] Proforma Invoice — {sendPreview.invoice_number}</span>
+                </div>
+              </div>
+              <div className="bg-[var(--bg-secondary)] rounded-2xl p-5 border border-[var(--border-color)]">
+                <div className="space-y-2">
+                  <p className="text-sm text-[var(--text-primary)]">Hello <strong>{sendPreview.client_name}</strong>,</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Thank you for choosing Expert Office Furnish. We are pleased to provide you with the requested quotation.</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Please find your official Proforma Invoice attached for reference number <strong className="text-green-500">{sendPreview.invoice_number}</strong>.</p>
+                  <div className="bg-[var(--bg-primary)] rounded-xl p-4 mt-3 border border-[var(--border-color)]">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[var(--text-muted)]">Grand Total:</span>
+                      <span className="font-black text-green-500">GHS {parseFloat(sendPreview.grand_total).toLocaleString('en-GH', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)] mt-2 italic">📎 PDF attachment: Proforma_{sendPreview.invoice_number}.pdf</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 border-t border-[var(--border-color)] flex items-center justify-end gap-3">
+              <button
+                onClick={() => setSendPreview(null)}
+                disabled={sending}
+                className="px-6 py-2.5 text-sm font-bold text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSend}
+                disabled={sending}
+                className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-black text-sm transition-all shadow-xl disabled:opacity-50 flex items-center gap-2 hover:scale-[1.02] active:scale-95 shadow-green-500/20"
+              >
+                {sending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                {sending ? 'Delivering...' : 'Send to Client'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };

@@ -12,7 +12,6 @@ import PublicProducts from './pages/PublicProducts';
 import AdminLogin from './pages/admin/AdminLogin';
 import Dashboard from './pages/admin/Dashboard';
 import Orders from './pages/admin/Orders';
-import Inquiries from './pages/admin/Inquiries';
 import Products from './pages/admin/Products';
 import Users from './pages/admin/Users';
 import Categories from './pages/admin/Categories';
@@ -135,7 +134,6 @@ function App() {
                           <Route path="discounts" element={<Discounts />} />
                           <Route path="orders" element={<Orders />} />
                           <Route path="proforma" element={<Proforma />} />
-                          <Route path="inquiries" element={<Inquiries />} />
                           <Route path="users" element={<Users />} />
                           <Route path="blogs" element={<Blogs />} />
                           <Route path="projects" element={<AdminProjects />} />
