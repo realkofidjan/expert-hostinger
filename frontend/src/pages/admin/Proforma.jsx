@@ -308,7 +308,7 @@ const Proforma = () => {
                   className="px-10 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-black text-sm transition-all shadow-xl disabled:opacity-50 flex items-center gap-2 hover:scale-[1.02] active:scale-95 shadow-green-500/20"
                 >
                   {submitting ? <Loader2 className="animate-spin" size={18} /> : (editMode ? <ClipboardCheck size={18} /> : <ClipboardCheck size={18} />)}
-                  {editMode ? 'Update Official Proforma' : 'Issue Official Proforma'}
+                  {editMode ? 'Update Proforma' : 'Save Proforma'}
                 </button>
             </div>
           </div>
