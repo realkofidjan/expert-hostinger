@@ -314,7 +314,7 @@ const AdminSettings = () => {
                         {r.status === 'restored' ? <CheckCircle2 size={12} /> : r.status === 'error' ? <X size={12} /> : <RotateCcw size={12} />}
                         {r.table || r.area}
                       </span>
-                      <span>{r.status === 'restored' ? `${r.rows} rows` : r.reason}</span>
+                      <span>{r.status === 'restored' ? (r.rows != null ? `${r.rows} rows` : `${r.files ?? 0} files`) : r.reason}</span>
                     </div>
                   ))}
                 </div>

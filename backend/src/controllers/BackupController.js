@@ -80,16 +80,18 @@ const restoreBackup = async (req, res) => {
             } catch (e) { console.warn(`Cleanup skip ${item}:`, e.message); }
           }
         }
-        
+
+        let assetCount = 0;
         for (const entry of zipEntries) {
           if (entry.entryName.startsWith('assets/') && !entry.isDirectory) {
             const entryPath = path.join(targetDir, entry.entryName);
             const parentDir = path.dirname(entryPath);
             if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true });
             fs.writeFileSync(entryPath, entry.getData());
+            assetCount++;
           }
         }
-        results.push({ area: 'assets', status: 'restored' });
+        results.push({ area: 'assets', status: 'restored', files: assetCount });
       }
     } catch (err) {
       console.warn('Asset restore issue:', err.message);
@@ -126,8 +128,16 @@ const restoreBackup = async (req, res) => {
         const colList = columns.map(c => `\`${c}\``).join(', ');
         const placeholders = columns.map(() => '?').join(', ');
 
+        // Boolean columns (TINYINT(1)) can come back from xlsx as true/false — coerce to 0/1
+        const booleanCols = new Set(['is_primary', 'is_featured', 'is_default', 'is_active', 'is_deleted']);
+
         for (const row of rows) {
-          const values = columns.map(c => (row[c] === undefined || row[c] === '') ? null : row[c]);
+          const values = columns.map(c => {
+            const v = row[c];
+            if (v === undefined || v === '') return null;
+            if (booleanCols.has(c) && typeof v === 'boolean') return v ? 1 : 0;
+            return v;
+          });
           await db.query(`INSERT INTO \`${tableName}\` (${colList}) VALUES (${placeholders})`, values);
         }
 
@@ -138,6 +148,27 @@ const restoreBackup = async (req, res) => {
     }
 
     await db.query('SET FOREIGN_KEY_CHECKS = 1');
+
+    // Repair: ensure every product with images has exactly one primary image
+    // (xlsx boolean round-trip can zero out is_primary values)
+    try {
+      await db.query(`
+        UPDATE product_images pi
+        INNER JOIN (
+          SELECT MIN(id) as first_id, product_id
+          FROM product_images
+          GROUP BY product_id
+        ) first ON first.product_id = pi.product_id
+        SET pi.is_primary = 1
+        WHERE pi.id = first.first_id
+          AND NOT EXISTS (
+            SELECT 1 FROM (SELECT product_id FROM product_images WHERE is_primary = 1) existing
+            WHERE existing.product_id = pi.product_id
+          )
+      `);
+    } catch (e) {
+      console.warn('Primary image repair skipped:', e.message);
+    }
 
     await db.query(
       'INSERT INTO activity_logs (user_id, action, context) VALUES (?, ?, ?)',
