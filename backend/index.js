@@ -122,7 +122,9 @@ app.use(express.static(frontendBuildPath, {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   maxAge: '30d'
 }));
-app.use('/assets', express.static(path.join(__dirname, 'assets'), {
+const assetsDir = process.env.ASSETS_DIR || path.join(__dirname, 'assets');
+if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir, { recursive: true });
+app.use('/assets', express.static(assetsDir, {
   maxAge: '30d'
 }));
 

@@ -3,7 +3,7 @@ const db = require('../config/db');
 const fs = require('fs');
 const path = require('path');
 
-const ASSETS_DIR = path.join(__dirname, '../../assets');
+const ASSETS_DIR = process.env.ASSETS_DIR || path.join(__dirname, '../../assets');
 const STORAGE_LIMIT = 50 * 1024 * 1024 * 1024; // 50 GB
 
 const getDirSize = (dirPath) => {

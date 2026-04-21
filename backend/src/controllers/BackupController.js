@@ -40,7 +40,7 @@ const exportBackup = async (req, res) => {
     }
 
     // Surgical archival of physical assets (Excluding uploads as requested)
-    const assetsDir = path.join(__dirname, '../../assets');
+    const assetsDir = process.env.ASSETS_DIR || path.join(__dirname, '../../assets');
     
     if (fs.existsSync(assetsDir)) {
       archive.directory(assetsDir, 'assets');
@@ -61,7 +61,8 @@ const restoreBackup = async (req, res) => {
     const results = [];
 
     // ── Phase 1: Physical Asset Restoration ──────────────────────────────────
-    const targetDir = path.join(__dirname, '../../');
+    const assetsBase = process.env.ASSETS_DIR || path.join(__dirname, '../../assets');
+    const targetDir = path.dirname(assetsBase); // parent of assets dir
     try {
       // Extract assets if they exist in the ZIP
       const zipEntries = zip.getEntries();
@@ -69,7 +70,7 @@ const restoreBackup = async (req, res) => {
 
       if (hasAssets) {
         // Clear current assets before restoring to ensure a clean state
-        const assetsPath = path.join(__dirname, '../../assets');
+        const assetsPath = process.env.ASSETS_DIR || path.join(__dirname, '../../assets');
         if (fs.existsSync(assetsPath)) {
           const items = fs.readdirSync(assetsPath);
           for (const item of items) {

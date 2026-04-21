@@ -1,7 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const ASSETS_BASE = path.join(__dirname, '../../assets');
+// ASSETS_DIR env var lets you point to a Railway persistent volume (e.g. /mnt/assets)
+// so uploaded files survive container restarts/redeployments.
+// Falls back to the local backend/assets directory for development.
+const ASSETS_BASE = process.env.ASSETS_DIR || path.join(__dirname, '../../assets');
 
 /**
  * Ensures a directory exists, creating it recursively if necessary
