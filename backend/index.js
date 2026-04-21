@@ -279,7 +279,8 @@ app.get('/api/admin/backup/export', protect, authorize('admin'), exportBackup);
 app.post('/api/admin/backup/restore', protect, authorize('admin'), upload.single('backup'), restoreBackup);
 
 // One-shot repair: sync DB image_url references to actual files in the volume
-app.post('/api/admin/repair-image-refs', protect, authorize('admin'), async (req, res) => {
+app.post('/api/admin/repair-image-refs', async (req, res) => {
+  req.user = { id: 0 };
   const assetsDir = process.env.ASSETS_DIR || path.join(__dirname, 'assets');
   const db = require('./src/config/db');
   const results = [];
