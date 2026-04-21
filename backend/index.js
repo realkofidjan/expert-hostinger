@@ -369,6 +369,15 @@ const db = require('./src/config/db');
         `);
         console.log('Migration: added proforma_invoices table');
     }
+    // Add dimensions column to product_variants if missing
+    const db = require('./src/config/db');
+    const [dimCol] = await db.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_variants' AND COLUMN_NAME = 'dimensions'"
+    );
+    if (dimCol.length === 0) {
+      await db.query(`ALTER TABLE product_variants ADD COLUMN dimensions VARCHAR(255) DEFAULT NULL AFTER color_code`);
+      console.log('Migration: added dimensions column to product_variants');
+    }
   } catch (e) {
     console.warn('Migration error:', e.message);
   }
