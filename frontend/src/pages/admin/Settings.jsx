@@ -312,7 +312,7 @@ const AdminSettings = () => {
                     <div key={i} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold ${r.status === 'restored' ? 'bg-green-500/10 text-green-500' : r.status === 'error' ? 'bg-red-500/10 text-red-400' : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'}`}>
                       <span className="flex items-center gap-1.5">
                         {r.status === 'restored' ? <CheckCircle2 size={12} /> : r.status === 'error' ? <X size={12} /> : <RotateCcw size={12} />}
-                        {r.table}
+                        {r.table || r.area}
                       </span>
                       <span>{r.status === 'restored' ? `${r.rows} rows` : r.reason}</span>
                     </div>

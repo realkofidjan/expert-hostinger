@@ -276,17 +276,22 @@ const resetDatabase = async (req, res) => {
         await db.query('SET FOREIGN_KEY_CHECKS = 0');
         // Clear almost everything except users, roles, and settings
         const tablesToClear = [
-            'notifications', 'activity_logs', 'logs', 'payments', 
-            'order_items', 'orders', 'inquiries', 'quotes', 'quote_items',
+            'notifications', 'activity_logs', 'logs',
+            'proforma_invoices',
+            'payments', 'order_items', 'orders',
+            'inquiries', 'quotes', 'quote_items',
             'cart_items', 'wishlist', 'wishlists', 'inventory_logs',
-            'products', 'product_variants', 'product_images', 
+            'products', 'product_variants', 'product_images',
             'categories', 'subcategories', 'brands', 'discounts', 'discount_codes',
             'projects', 'project_images', 'gallery_projects', 'gallery_images',
             'promotions', 'sales', 'newsletters'
         ];
-        
+
+        const resetErrors = [];
         for (const table of tablesToClear) {
-            try { await db.query(`TRUNCATE TABLE \`${table}\``); } catch (e) { /* table may not exist */ }
+            try { await db.query(`TRUNCATE TABLE \`${table}\``); } catch (e) {
+                if (!e.message.includes("doesn't exist")) resetErrors.push({ table, error: e.message });
+            }
         }
         await db.query('SET FOREIGN_KEY_CHECKS = 1');
 
@@ -314,7 +319,10 @@ const resetDatabase = async (req, res) => {
             [req.user.id, 'RESET_DATABASE', `Database operational data and assets reset by admin UID-${req.user.id}`]
         );
 
-        res.json({ message: 'Database reset complete. All products, orders, inquiries, projects, assets, and logs have been cleared. User accounts, roles, and settings were preserved.' });
+        res.json({
+            message: 'Database reset complete. All products, orders, inquiries, projects, assets, and logs have been cleared. User accounts, roles, and settings were preserved.',
+            ...(resetErrors.length > 0 && { warnings: resetErrors })
+        });
     } catch (error) {
         console.error('RESET_DATABASE_ERROR:', error);
         // Ensure FK checks are re-enabled even on error

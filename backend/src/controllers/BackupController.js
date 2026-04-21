@@ -10,6 +10,7 @@ const BACKUP_TABLES = [
   'categories', 'subcategories', 'brands',
   'blogs', 'blog_images', 'orders', 'order_items',
   'inquiries', 'quotes', 'quote_items', 'payments',
+  'proforma_invoices',
   'settings', 'delivery_regions', 'discounts', 'discount_codes',
   'sales', 'projects', 'project_images', 'activity_logs',
   'notifications', 'addresses'
