@@ -103,17 +103,31 @@ const validateUpload = async (req, res) => {
                 errors.push(`Brand '${brandInput}' not found`);
             }
 
-            // Variants parsing
+            // Variants parsing — supports both:
+            //   Color:Stock            (e.g. "Black:20")
+            //   Color:Dimensions:Stock (e.g. "Black:120x60cm:20")
             const variants = [];
             const rawVariants = row.Variants || row.variants || '';
             if (rawVariants) {
                 const pairs = rawVariants.split(',').map(p => p.trim());
                 for (const pair of pairs) {
-                    const [vColor, vStock] = pair.split(':').map(s => s?.trim());
-                    if (!vColor || isNaN(parseInt(vStock))) {
-                        errors.push(`Invalid Variant: ${pair}`);
+                    const parts = pair.split(':').map(s => s?.trim());
+                    if (parts.length === 2) {
+                        const [vColor, vStock] = parts;
+                        if (!vColor || isNaN(parseInt(vStock))) {
+                            errors.push(`Invalid Variant: ${pair}`);
+                        } else {
+                            variants.push({ color_name: vColor, dimensions: null, stock_quantity: parseInt(vStock) });
+                        }
+                    } else if (parts.length === 3) {
+                        const [vColor, vDimensions, vStock] = parts;
+                        if (!vColor || isNaN(parseInt(vStock))) {
+                            errors.push(`Invalid Variant: ${pair}`);
+                        } else {
+                            variants.push({ color_name: vColor, dimensions: vDimensions || null, stock_quantity: parseInt(vStock) });
+                        }
                     } else {
-                        variants.push({ color_name: vColor, stock_quantity: parseInt(vStock) });
+                        errors.push(`Invalid Variant format: ${pair} (expected Color:Stock or Color:Dimensions:Stock)`);
                     }
                 }
             }

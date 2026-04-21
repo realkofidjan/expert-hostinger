@@ -312,7 +312,8 @@ const getTemplate = async (req, res) => {
 
         const mainData = [
             ["Name", "SKU", "Price", "Stock", "Category", "Subcategory", "Brand", "Description", "Image URLs", "Variants"],
-            ["Ergonomic Executive Chair", "EXE-CHR-001", 12500.00, 50, "Furniture", "Executive Chairs", "Expert", "Premium ergonomic chair with lumbar support", "https://photos.app.goo.gl/example1, https://photos.app.goo.gl/example2", "Black:20, Grey:15, Blue:15"]
+            ["Ergonomic Executive Chair", "EXE-CHR-001", 12500.00, "", "Furniture", "Executive Chairs", "Expert", "Premium ergonomic chair with lumbar support", "https://photos.app.goo.gl/example1", "Black:120x60x75cm:20, Black:160x80x75cm:10, Grey:120x60x75cm:15"],
+            ["Office Side Table", "SIDE-TBL-001", 4500.00, "", "Furniture", "Tables", "Expert", "Compact side table", "", "White:30, Brown:25"]
         ];
 
         const refData = [["Valid Categories", "Valid Subcategories", "Valid Brands"]];
