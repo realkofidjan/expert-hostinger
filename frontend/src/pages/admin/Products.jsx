@@ -174,7 +174,7 @@ const Products = () => {
   const handleAddVariant = () => {
     setNewProduct({
       ...newProduct,
-      variants: [...newProduct.variants, { color_name: '', stock_quantity: 0 }]
+      variants: [...newProduct.variants, { color_name: '', color_code: '', dimensions: '', stock_quantity: 0 }]
     });
   };
 
@@ -698,7 +698,7 @@ const Products = () => {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Palette size={16} className="text-yellow-500" />
-                            <h3 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-widest">Color Variants & Stock</h3>
+                            <h3 className="text-xs font-black text-[var(--text-primary)] uppercase tracking-widest">Variants (Color & Dimensions)</h3>
                           </div>
                           <button
                             type="button"
@@ -716,14 +716,14 @@ const Products = () => {
                               <Palette size={24} />
                             </div>
                             <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">No variants defined yet</p>
-                            <p className="text-[9px] text-[var(--text-muted)]/60 mt-1">Add colors to manage stock individually</p>
+                            <p className="text-[9px] text-[var(--text-muted)]/60 mt-1">Add color + dimension combinations to manage stock individually</p>
                           </div>
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {newProduct.variants.map((variant, index) => (
                               <div key={index} className="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl p-4 flex items-center gap-4 relative group animate-slideUp">
                                 <div className="flex-1 space-y-3">
-                                  <div className="grid grid-cols-2 gap-3">
+                                  <div className="grid grid-cols-3 gap-3">
                                     <div>
                                       <label className="block text-[8px] font-black text-[var(--text-muted)] uppercase mb-1 tracking-widest">Color Name</label>
                                       <input
@@ -751,6 +751,16 @@ const Products = () => {
                                           onChange={(e) => handleVariantChange(index, 'color_code', e.target.value)}
                                         />
                                       </div>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[8px] font-black text-[var(--text-muted)] uppercase mb-1 tracking-widest">Dimensions</label>
+                                      <input
+                                        type="text"
+                                        placeholder="e.g. 120×60×75 cm"
+                                        className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg p-2 text-[var(--text-primary)] text-[11px] focus:outline-none focus:border-yellow-500"
+                                        value={variant.dimensions || ''}
+                                        onChange={(e) => handleVariantChange(index, 'dimensions', e.target.value)}
+                                      />
                                     </div>
                                   </div>
                                   <div>

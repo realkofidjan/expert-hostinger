@@ -40,8 +40,8 @@ const Product = {
         if (variants && variants.length > 0) {
             for (const v of variants) {
                 await db.query(
-                    'INSERT INTO product_variants (product_id, color_name, stock_quantity, sku) VALUES (?, ?, ?, ?)',
-                    [productId, v.color_name, v.stock_quantity || 0, v.sku || `${sku}-${v.color_name}`]
+                    'INSERT INTO product_variants (product_id, color_name, color_code, dimensions, stock_quantity, sku) VALUES (?, ?, ?, ?, ?, ?)',
+                    [productId, v.color_name, v.color_code || null, v.dimensions || null, v.stock_quantity || 0, v.sku || `${sku}-${v.color_name}-${v.dimensions || 'std'}`.replace(/\s+/g, '_')]
                 );
             }
         }
@@ -90,8 +90,8 @@ const Product = {
             if (variants && variants.length > 0) {
                 for (const v of variants) {
                     await db.query(
-                        'INSERT INTO product_variants (product_id, color_name, stock_quantity, sku) VALUES (?, ?, ?, ?)',
-                        [id, v.color_name, v.stock_quantity || 0, v.sku || `${sku}-${v.color_name}`]
+                        'INSERT INTO product_variants (product_id, color_name, color_code, dimensions, stock_quantity, sku) VALUES (?, ?, ?, ?, ?, ?)',
+                        [id, v.color_name, v.color_code || null, v.dimensions || null, v.stock_quantity || 0, v.sku || `${sku}-${v.color_name}-${v.dimensions || 'std'}`.replace(/\s+/g, '_')]
                     );
                 }
             }

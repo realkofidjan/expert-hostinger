@@ -313,6 +313,15 @@ const addMissingTables = async () => {
             console.log('Proforma Invoices table created.');
         }
 
+        // Add dimensions column to product_variants if missing
+        const [dimCol] = await connection.query(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_variants' AND COLUMN_NAME = 'dimensions'"
+        );
+        if (dimCol.length === 0) {
+            await connection.query(`ALTER TABLE product_variants ADD COLUMN dimensions VARCHAR(255) DEFAULT NULL AFTER color_code`);
+            console.log('Added dimensions column to product_variants.');
+        }
+
         console.log('--- Verification Complete ---');
     } catch (error) {
         console.error('Error adding missing tables:', error);
