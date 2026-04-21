@@ -285,6 +285,8 @@ app.post('/api/admin/repair-image-refs', async (req, res) => {
   const db = require('./src/config/db');
   const results = [];
 
+  const parentTable = { 'product_images': 'products', 'project_images': 'projects' };
+
   const repairDir = async (dirPath, prefix, tableName, idCol, urlCol) => {
     if (!fs.existsSync(dirPath)) return;
     const subdirs = fs.readdirSync(dirPath, { withFileTypes: true }).filter(d => d.isDirectory());
@@ -294,13 +296,22 @@ app.post('/api/admin/repair-image-refs', async (req, res) => {
       const actualFiles = fs.readdirSync(entityDir).filter(f => !f.startsWith('.')).sort();
       if (!actualFiles.length) continue;
 
+      // Skip if parent entity doesn't exist (avoid FK violations)
+      const parent = parentTable[tableName];
+      if (parent) {
+        const [parentRows] = await db.query(`SELECT id FROM \`${parent}\` WHERE id = ?`, [entityId]);
+        if (!parentRows.length) {
+          results.push({ id: entityId, table: tableName, skipped: 'parent not found' });
+          continue;
+        }
+      }
+
       const [dbRows] = await db.query(
         `SELECT id, ${urlCol}, is_primary FROM ${tableName} WHERE ${idCol} = ? ORDER BY id`,
         [entityId]
       );
 
-      const count = Math.max(dbRows.length, actualFiles.length);
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < Math.max(dbRows.length, actualFiles.length); i++) {
         const newUrl = `/assets/${prefix}/${entityId}/${actualFiles[Math.min(i, actualFiles.length - 1)]}`;
         if (i < dbRows.length && i < actualFiles.length) {
           await db.query(`UPDATE ${tableName} SET ${urlCol} = ? WHERE id = ?`, [newUrl, dbRows[i].id]);
@@ -314,7 +325,6 @@ app.post('/api/admin/repair-image-refs', async (req, res) => {
         }
       }
 
-      // Sync products.primary_image denormalized field
       if (tableName === 'product_images') {
         const primaryUrl = `/assets/${prefix}/${entityId}/${actualFiles[0]}`;
         await db.query('UPDATE products SET primary_image = ? WHERE id = ?', [primaryUrl, entityId]);
