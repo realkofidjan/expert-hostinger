@@ -277,6 +277,80 @@ app.delete('/api/admin/projects/:id', protect, authorize('admin', 'sub-admin'), 
 // ── Backup & Restore ─────────────────────────────────────────────────────────
 app.get('/api/admin/backup/export', protect, authorize('admin'), exportBackup);
 app.post('/api/admin/backup/restore', protect, authorize('admin'), upload.single('backup'), restoreBackup);
+
+// One-shot repair: sync DB image_url references to actual files in the volume
+app.post('/api/admin/repair-image-refs', protect, authorize('admin'), async (req, res) => {
+  const assetsDir = process.env.ASSETS_DIR || path.join(__dirname, 'assets');
+  const db = require('./src/config/db');
+  const results = [];
+
+  const repairDir = async (dirPath, prefix, tableName, idCol, urlCol) => {
+    if (!fs.existsSync(dirPath)) return;
+    const subdirs = fs.readdirSync(dirPath, { withFileTypes: true }).filter(d => d.isDirectory());
+    for (const sub of subdirs) {
+      const entityId = sub.name;
+      const entityDir = path.join(dirPath, entityId);
+      const actualFiles = fs.readdirSync(entityDir).filter(f => !f.startsWith('.')).sort();
+      if (!actualFiles.length) continue;
+
+      const [dbRows] = await db.query(
+        `SELECT id, ${urlCol}, is_primary FROM ${tableName} WHERE ${idCol} = ? ORDER BY id`,
+        [entityId]
+      );
+
+      const count = Math.max(dbRows.length, actualFiles.length);
+      for (let i = 0; i < count; i++) {
+        const newUrl = `/assets/${prefix}/${entityId}/${actualFiles[Math.min(i, actualFiles.length - 1)]}`;
+        if (i < dbRows.length && i < actualFiles.length) {
+          await db.query(`UPDATE ${tableName} SET ${urlCol} = ? WHERE id = ?`, [newUrl, dbRows[i].id]);
+        } else if (i >= dbRows.length) {
+          await db.query(
+            `INSERT INTO ${tableName} (${idCol}, ${urlCol}, is_primary) VALUES (?, ?, 0)`,
+            [entityId, newUrl]
+          );
+        } else {
+          await db.query(`DELETE FROM ${tableName} WHERE id = ?`, [dbRows[i].id]);
+        }
+      }
+
+      // Sync products.primary_image denormalized field
+      if (tableName === 'product_images') {
+        const primaryUrl = `/assets/${prefix}/${entityId}/${actualFiles[0]}`;
+        await db.query('UPDATE products SET primary_image = ? WHERE id = ?', [primaryUrl, entityId]);
+      }
+
+      results.push({ id: entityId, table: tableName, files: actualFiles.length, dbRows: dbRows.length });
+    }
+  };
+
+  try {
+    await repairDir(path.join(assetsDir, 'products_imgs'), 'products_imgs', 'product_images', 'product_id', 'image_url');
+    await repairDir(path.join(assetsDir, 'content_imgs', 'projects'), 'content_imgs/projects', 'project_images', 'project_id', 'image_url');
+
+    // Ensure one primary image per product
+    await db.query(`
+      UPDATE product_images pi
+      INNER JOIN (SELECT MIN(id) AS fid, product_id FROM product_images GROUP BY product_id) f
+        ON f.product_id = pi.product_id
+      SET pi.is_primary = 1
+      WHERE pi.id = f.fid
+        AND NOT EXISTS (
+          SELECT 1 FROM (SELECT product_id FROM product_images WHERE is_primary = 1) ex
+          WHERE ex.product_id = pi.product_id
+        )
+    `);
+
+    await db.query(
+      'INSERT INTO activity_logs (user_id, action, context) VALUES (?, ?, ?)',
+      [req.user.id, 'REPAIR_IMAGE_REFS', `Repaired ${results.length} entity image references`]
+    );
+
+    res.json({ message: 'Image references repaired', repaired: results.length, results });
+  } catch (error) {
+    console.error('REPAIR_IMAGE_REFS_ERROR:', error);
+    res.status(500).json({ error: 'Repair failed', details: error.message });
+  }
+});
 app.get('/api/admin/assets/info', (req, res) => {
   const dir = process.env.ASSETS_DIR || path.join(__dirname, 'assets');
   const listFiles = (d, base = '') => {
