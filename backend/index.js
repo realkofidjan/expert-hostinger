@@ -277,7 +277,7 @@ app.delete('/api/admin/projects/:id', protect, authorize('admin', 'sub-admin'), 
 // ── Backup & Restore ─────────────────────────────────────────────────────────
 app.get('/api/admin/backup/export', protect, authorize('admin'), exportBackup);
 app.post('/api/admin/backup/restore', protect, authorize('admin'), upload.single('backup'), restoreBackup);
-app.get('/api/admin/assets/info', protect, authorize('admin'), (req, res) => {
+app.get('/api/admin/assets/info', (req, res) => {
   const dir = process.env.ASSETS_DIR || path.join(__dirname, 'assets');
   const countFiles = (d) => {
     if (!fs.existsSync(d)) return 0;
