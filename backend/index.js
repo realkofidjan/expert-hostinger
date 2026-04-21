@@ -279,11 +279,18 @@ app.get('/api/admin/backup/export', protect, authorize('admin'), exportBackup);
 app.post('/api/admin/backup/restore', protect, authorize('admin'), upload.single('backup'), restoreBackup);
 app.get('/api/admin/assets/info', (req, res) => {
   const dir = process.env.ASSETS_DIR || path.join(__dirname, 'assets');
-  const countFiles = (d) => {
-    if (!fs.existsSync(d)) return 0;
-    return fs.readdirSync(d, { recursive: true, withFileTypes: true }).filter(f => f.isFile()).length;
+  const listFiles = (d, base = '') => {
+    if (!fs.existsSync(d)) return [];
+    const results = [];
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      const rel = base ? `${base}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) results.push(...listFiles(path.join(d, entry.name), rel));
+      else results.push(rel);
+    }
+    return results;
   };
-  res.json({ ASSETS_DIR: process.env.ASSETS_DIR || '(not set)', resolvedPath: dir, fileCount: countFiles(dir) });
+  const files = listFiles(dir);
+  res.json({ ASSETS_DIR: process.env.ASSETS_DIR || '(not set)', resolvedPath: dir, fileCount: files.length, files: files.slice(0, 50) });
 });
 
 // ── Bulk Upload ───────────────────────────────────────────────────────────────
