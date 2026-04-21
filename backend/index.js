@@ -460,8 +460,13 @@ const db = require('./src/config/db');
         `);
         console.log('Migration: added proforma_invoices table');
     }
-    // Add dimensions column to product_variants if missing
-    const db = require('./src/config/db');
+  } catch (e) {
+    console.warn('Migration error:', e.message);
+  }
+
+  // Standalone migration: dimensions column on product_variants
+  // Must be separate so earlier migration failures don't skip it
+  try {
     const [dimCol] = await db.query(
       "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_variants' AND COLUMN_NAME = 'dimensions'"
     );
@@ -470,7 +475,7 @@ const db = require('./src/config/db');
       console.log('Migration: added dimensions column to product_variants');
     }
   } catch (e) {
-    console.warn('Migration error:', e.message);
+    console.warn('Migration (dimensions) error:', e.message);
   }
 })();
 
