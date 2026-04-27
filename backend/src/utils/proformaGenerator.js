@@ -127,7 +127,7 @@ const buildProformaHtml = (invoice, items, cfg) => {
           <img src="${LOGO_BASE64 || `${BASE_URL}/assets/Company logo.png`}" class="logo" alt="Expert Office Logo" />
           <div>
             <div class="brand">Expert Office Furnish</div>
-            <div style="font-size: 10px; color: #666; margin-top: 2px">High Quality Office Furniture & Design Solutions</div>
+            <div style="font-size: 10px; color: #666; margin-top: 2px">Your Health, Your Wealth</div>
           </div>
         </div>
         <div>
