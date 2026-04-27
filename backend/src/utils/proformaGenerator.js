@@ -44,27 +44,11 @@ try {
 const buildProformaHtml = (invoice, items, cfg) => {
   const fmt = (n) => parseFloat(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2 });
   
-  // Load Signature if exists — try volume path first, fall back to ephemeral backend/assets
-  let sigBase64 = '';
-  if (invoice.creator_signature) {
-    try {
-        const relPath = invoice.creator_signature.replace(/^\//, '').replace(/^assets\//, '');
-        const candidatePaths = [
-            path.join(process.env.ASSETS_DIR || path.join(__dirname, '../../assets'), relPath),
-            path.join(__dirname, '../../assets', relPath),   // ephemeral fallback
-        ];
-        for (const sigPath of candidatePaths) {
-            if (fs.existsSync(sigPath)) {
-                const sigBuffer = fs.readFileSync(sigPath);
-                const sigExt = path.extname(sigPath).slice(1).toLowerCase() || 'png';
-                sigBase64 = `data:image/${sigExt === 'jpg' ? 'jpeg' : sigExt};base64,${sigBuffer.toString('base64')}`;
-                break;
-            }
-        }
-    } catch (err) {
-        console.error('Error loading signature for proforma:', err.message);
-    }
-  }
+  // Signature: serve via HTTP URL so puppeteer fetches it through Express static
+  // (Express serves /mnt/assets at /assets, so the URL resolves correctly)
+  const sigUrl = invoice.creator_signature
+    ? getImageUrl(invoice.creator_signature.startsWith('/') ? invoice.creator_signature : `/${invoice.creator_signature}`)
+    : '';
 
   const rows = items.map(i => `
     <tr style="border-bottom:1px solid #f3f4f6">
@@ -204,7 +188,7 @@ const buildProformaHtml = (invoice, items, cfg) => {
       
       <div class="signatures-section">
         <div class="sig-block">
-          ${sigBase64 ? `<img src="${sigBase64}" class="sig-img" alt="Signature" />` : '<div style="height: 40px"></div>'}
+          ${sigUrl ? `<img src="${sigUrl}" class="sig-img" alt="Signature" />` : '<div style="height: 40px"></div>'}
           <div class="sig-line">Expert Representative: ${invoice.creator_name || 'Admin'}</div>
         </div>
         <div class="sig-block">
