@@ -207,7 +207,7 @@ const buildProformaHtml = (invoice, items, cfg) => {
         </div>
       </div>
 
-      <div class="footer">Transforming spaces, Inspiring productivity. — Expert Office Furnish</div>
+      <div class="footer">Your health, your wealth. — Expert Office Furnish</div>
     </div>
   </div>
 </body></html>`;

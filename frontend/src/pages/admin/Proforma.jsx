@@ -51,8 +51,8 @@ const Proforma = () => {
     items: [],
     vat_percentage: 20.0,
     warranty: '3 years',
-    delivery_terms: 'IMMEDIATE',
-    payment_terms: '21 DAYS',
+    delivery_terms: '3-5 WORKING DAYS',
+    payment_terms: 'IMMEDIATE',
     validity_days: '10 DAYS'
   });
 
@@ -175,8 +175,8 @@ const Proforma = () => {
       items: items,
       vat_percentage: parseFloat(inv.vat_percentage || 20.0),
       warranty: inv.warranty || '3 years',
-      delivery_terms: inv.delivery_terms || 'IMMEDIATE',
-      payment_terms: inv.payment_terms || '21 DAYS',
+      delivery_terms: inv.delivery_terms || '3-5 WORKING DAYS',
+      payment_terms: inv.payment_terms || 'IMMEDIATE',
       validity_days: inv.validity_days || '10 DAYS'
     });
     setEditingId(inv.id);
