@@ -45,15 +45,19 @@ const buildProformaHtml = (invoice, items, cfg) => {
   const fmt = (n) => parseFloat(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2 });
   
   // Load Signature if exists
+  const ASSETS_BASE = process.env.ASSETS_DIR || path.join(__dirname, '../../assets');
   let sigBase64 = '';
   if (invoice.creator_signature) {
     try {
-        const cleanSigPath = invoice.creator_signature.startsWith('/') ? invoice.creator_signature.slice(1) : invoice.creator_signature;
-        const sigPath = path.join(__dirname, '..', '..', cleanSigPath);
+        // DB stores 'assets/signature_imgs/...' — strip the 'assets/' prefix since ASSETS_BASE already points there
+        const relPath = invoice.creator_signature.replace(/^\//, '').replace(/^assets\//, '');
+        const sigPath = path.join(ASSETS_BASE, relPath);
         if (fs.existsSync(sigPath)) {
             const sigBuffer = fs.readFileSync(sigPath);
             const sigExt = path.extname(sigPath).slice(1) || 'png';
             sigBase64 = `data:image/${sigExt === 'jpg' ? 'jpeg' : sigExt};base64,${sigBuffer.toString('base64')}`;
+        } else {
+            console.warn('Signature file not found at:', sigPath);
         }
     } catch (err) {
         console.error('Error loading signature for proforma:', err.message);
