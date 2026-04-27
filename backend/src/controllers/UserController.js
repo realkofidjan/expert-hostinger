@@ -121,7 +121,9 @@ const getStats = async (req, res) => {
                 AND YEAR(created_at) = YEAR(CURRENT_DATE())
             `),
             db.query(`
-                SELECT p.id, p.name, p.primary_image, SUM(oi.quantity) as sold_qty, SUM(oi.subtotal) as total_revenue
+                SELECT p.id, p.name,
+                    (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as primary_image,
+                    SUM(oi.quantity) as sold_qty, SUM(oi.subtotal) as total_revenue
                 FROM order_items oi
                 JOIN products p ON oi.product_id = p.id
                 JOIN orders o ON oi.order_id = o.id
