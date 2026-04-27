@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 
 const generatePdf = async (htmlContent) => {
-  const browser = await puppeteer.launch({
+  const launchOptions = {
     headless: true,
     args: [
       '--no-sandbox',
@@ -10,7 +10,12 @@ const generatePdf = async (htmlContent) => {
       '--disable-gpu',
       '--no-first-run',
     ]
-  });
+  };
+  // Use system Chromium on Railway (set via PUPPETEER_EXECUTABLE_PATH env var)
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  const browser = await puppeteer.launch(launchOptions);
   const page = await browser.newPage();
   
   // Set content and wait for images/links to load
