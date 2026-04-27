@@ -47,26 +47,18 @@ const buildProformaHtml = (invoice, items, cfg) => {
   // Load Signature if exists
   const ASSETS_BASE = process.env.ASSETS_DIR || path.join(__dirname, '../../assets');
   let sigBase64 = '';
-  console.log('[SIG DEBUG] creator_signature value:', invoice.creator_signature);
-  console.log('[SIG DEBUG] ASSETS_BASE:', ASSETS_BASE);
   if (invoice.creator_signature) {
     try {
         const relPath = invoice.creator_signature.replace(/^\//, '').replace(/^assets\//, '');
         const sigPath = path.join(ASSETS_BASE, relPath);
-        console.log('[SIG DEBUG] resolved sigPath:', sigPath, '| exists:', fs.existsSync(sigPath));
         if (fs.existsSync(sigPath)) {
             const sigBuffer = fs.readFileSync(sigPath);
             const sigExt = path.extname(sigPath).slice(1) || 'png';
             sigBase64 = `data:image/${sigExt === 'jpg' ? 'jpeg' : sigExt};base64,${sigBuffer.toString('base64')}`;
-            console.log('[SIG DEBUG] signature loaded OK, bytes:', sigBuffer.length);
-        } else {
-            console.warn('[SIG DEBUG] file not found at:', sigPath);
         }
     } catch (err) {
-        console.error('[SIG DEBUG] Error loading signature:', err.message);
+        console.error('Error loading signature for proforma:', err.message);
     }
-  } else {
-    console.warn('[SIG DEBUG] creator_signature is null/empty — user has no signature set in DB');
   }
 
   const rows = items.map(i => `

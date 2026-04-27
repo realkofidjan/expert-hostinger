@@ -79,6 +79,23 @@ const receiptUpload = multer({
 const signatureDir = path.join(process.env.ASSETS_DIR || path.join(__dirname, 'assets'), 'signature_imgs');
 if (!fs.existsSync(signatureDir)) fs.mkdirSync(signatureDir, { recursive: true });
 
+// Migrate any signature files left in the ephemeral backend/assets/signature_imgs to the volume
+if (process.env.ASSETS_DIR) {
+  try {
+    const ephemeralSigDir = path.join(__dirname, 'assets', 'signature_imgs');
+    if (fs.existsSync(ephemeralSigDir)) {
+      for (const f of fs.readdirSync(ephemeralSigDir)) {
+        const src = path.join(ephemeralSigDir, f);
+        const dest = path.join(signatureDir, f);
+        if (!fs.existsSync(dest)) {
+          fs.copyFileSync(src, dest);
+          console.log(`[SIG MIGRATE] Copied ${f} → volume`);
+        }
+      }
+    }
+  } catch (e) { console.warn('[SIG MIGRATE] error:', e.message); }
+}
+
 const signatureStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, signatureDir),
   filename: (req, file, cb) => {
