@@ -44,17 +44,22 @@ try {
 const buildProformaHtml = (invoice, items, cfg) => {
   const fmt = (n) => parseFloat(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2 });
   
-  // Load Signature if exists
-  const ASSETS_BASE = process.env.ASSETS_DIR || path.join(__dirname, '../../assets');
+  // Load Signature if exists — try volume path first, fall back to ephemeral backend/assets
   let sigBase64 = '';
   if (invoice.creator_signature) {
     try {
         const relPath = invoice.creator_signature.replace(/^\//, '').replace(/^assets\//, '');
-        const sigPath = path.join(ASSETS_BASE, relPath);
-        if (fs.existsSync(sigPath)) {
-            const sigBuffer = fs.readFileSync(sigPath);
-            const sigExt = path.extname(sigPath).slice(1) || 'png';
-            sigBase64 = `data:image/${sigExt === 'jpg' ? 'jpeg' : sigExt};base64,${sigBuffer.toString('base64')}`;
+        const candidatePaths = [
+            path.join(process.env.ASSETS_DIR || path.join(__dirname, '../../assets'), relPath),
+            path.join(__dirname, '../../assets', relPath),   // ephemeral fallback
+        ];
+        for (const sigPath of candidatePaths) {
+            if (fs.existsSync(sigPath)) {
+                const sigBuffer = fs.readFileSync(sigPath);
+                const sigExt = path.extname(sigPath).slice(1).toLowerCase() || 'png';
+                sigBase64 = `data:image/${sigExt === 'jpg' ? 'jpeg' : sigExt};base64,${sigBuffer.toString('base64')}`;
+                break;
+            }
         }
     } catch (err) {
         console.error('Error loading signature for proforma:', err.message);

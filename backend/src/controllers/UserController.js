@@ -78,7 +78,6 @@ const getStats = async (req, res) => {
             [productCount],
             [orderCount],
             [pendingOrderCount],
-            [quoteCount],
             [lowStockProducts],
             [lowStockCount],
             [recentOrders],
@@ -87,11 +86,10 @@ const getStats = async (req, res) => {
             [bestSellingProducts],
         ] = await Promise.all([
             db.query('SELECT COUNT(*) as count FROM users'),
-            db.query('SELECT COUNT(*) as count FROM users WHERE role = "customer"'),
+            db.query(`SELECT COUNT(*) as count FROM users WHERE role = 'customer'`),
             db.query('SELECT COUNT(*) as count FROM products'),
-            db.query('SELECT COUNT(*) as count FROM orders'),
-            db.query('SELECT COUNT(*) as count FROM orders WHERE status = "pending"'),
-            db.query('SELECT COUNT(*) as count FROM quotes'),
+            db.query(`SELECT COUNT(*) as count FROM orders WHERE status != 'cancelled'`),
+            db.query(`SELECT COUNT(*) as count FROM orders WHERE status = 'pending'`),
             db.query(`
                 SELECT p.id, p.name, p.stock, c.name as category
                 FROM products p
@@ -111,12 +109,14 @@ const getStats = async (req, res) => {
             db.query(`
                 SELECT COALESCE(SUM(total_amount), 0) as total
                 FROM orders
-                WHERE payment_status IN ('paid', 'verified')
+                WHERE payment_status IN ('paid', 'verified', 'pending_verification')
+                AND status != 'cancelled'
             `),
             db.query(`
                 SELECT COALESCE(SUM(total_amount), 0) as total
                 FROM orders
-                WHERE payment_status IN ('paid', 'verified')
+                WHERE payment_status IN ('paid', 'verified', 'pending_verification')
+                AND status != 'cancelled'
                 AND MONTH(created_at) = MONTH(CURRENT_DATE())
                 AND YEAR(created_at) = YEAR(CURRENT_DATE())
             `),
@@ -125,7 +125,8 @@ const getStats = async (req, res) => {
                 FROM order_items oi
                 JOIN products p ON oi.product_id = p.id
                 JOIN orders o ON oi.order_id = o.id
-                WHERE o.payment_status IN ('paid', 'verified')
+                WHERE o.payment_status IN ('paid', 'verified', 'pending_verification')
+                AND o.status != 'cancelled'
                 GROUP BY p.id
                 ORDER BY sold_qty DESC
                 LIMIT 5
@@ -140,7 +141,6 @@ const getStats = async (req, res) => {
             totalProducts: productCount[0].count,
             totalOrders: orderCount[0].count,
             pendingOrders: pendingOrderCount[0].count,
-            totalQuotes: quoteCount[0].count,
             storage,
             lowStockProducts,
             lowStockCount: lowStockCount[0].count,

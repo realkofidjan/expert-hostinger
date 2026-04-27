@@ -6,11 +6,9 @@ const generatePdf = async (htmlContent) => {
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',   // critical for Docker/Railway containers
+      '--disable-dev-shm-usage',
       '--disable-gpu',
       '--no-first-run',
-      '--no-zygote',
-      '--single-process',
     ]
   });
   const page = await browser.newPage();
