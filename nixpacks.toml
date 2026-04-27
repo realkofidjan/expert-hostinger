@@ -39,7 +39,9 @@ aptPkgs = [
 [variables]
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
 PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium-browser"
-NPM_CONFIG_PRODUCTION = "false"
+
+[phases.install]
+cmds = ["PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm ci --omit=dev"]
 
 [phases.build]
 dependsOn = ["setup"]
