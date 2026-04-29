@@ -1,4 +1,4 @@
-# Expert Office Furnish v2.0
+# Expert Office Furnish v2.1
 
 Expert Office Furnish is a premium, high-end E-commerce and Workspace Solutions platform designed for a seamless furniture shopping experience and professional office interior services. Built with a modern architectural aesthetic, the system features robust administrative controls, dynamic product filtering, and a cinematic user interface.
 
