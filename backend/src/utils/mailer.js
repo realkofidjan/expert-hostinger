@@ -2,7 +2,8 @@ const { Resend } = require('resend');
 
 // Resend uses HTTPS (port 443) — works perfectly on Railway.
 // No SMTP ports needed, no IPv6 issues.
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Use a placeholder key locally so module load doesn't throw; actual sends will fail gracefully.
+const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder_local_dev');
 
 const sendMail = async ({ to, subject, html, text, attachments }) => {
   if (!process.env.RESEND_API_KEY) {
