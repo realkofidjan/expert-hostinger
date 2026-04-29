@@ -88,7 +88,11 @@ const ProductCard = ({ product }) => {
           </Link>
         </div>
 
-        {product.is_featured && (
+        {product.sale_price != null ? (
+          <div className="absolute top-3 left-3 bg-red-500 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow">
+            SALE
+          </div>
+        ) : product.is_featured && (
           <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-gray-900 shadow">
             Featured
           </div>
@@ -150,9 +154,20 @@ const ProductCard = ({ product }) => {
             {product.price > 0 && (
               <div className="text-right">
                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Price</p>
-                <p className="text-sm font-black text-gray-900 dark:text-white">
-                  ₵{parseFloat(product.price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
-                </p>
+                {product.sale_price != null ? (
+                  <>
+                    <p className="text-[10px] text-gray-400 line-through leading-none">
+                      ₵{parseFloat(product.price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-sm font-black text-red-500">
+                      ₵{parseFloat(product.sale_price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm font-black text-gray-900 dark:text-white">
+                    ₵{parseFloat(product.price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
+                  </p>
+                )}
               </div>
             )}
           </div>

@@ -1,100 +1,35 @@
-import React, { useState } from 'react';
-import { Check, X, MapPin } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Check, X, MapPin, Loader2 } from 'lucide-react';
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   SVG path data for Ghana's 16 administrative regions.
-   ViewBox: 0 0 300 420  (w × h)
-   Coordinates are approximate but proportionally representative.
-──────────────────────────────────────────────────────────────────────────────*/
-const REGION_PATHS = [
-  {
-    key: 'upper_west',   name: 'Upper West',
-    d: 'M0,0 L125,0 L120,58 L98,80 L0,75 Z',
-    lx: 52, ly: 40,
-  },
-  {
-    key: 'upper_east',   name: 'Upper East',
-    d: 'M178,0 L300,0 L300,50 L255,62 L220,65 L178,48 Z',
-    lx: 242, ly: 28,
-  },
-  {
-    key: 'north_east',   name: 'North East',
-    d: 'M215,93 L255,62 L300,50 L300,148 L258,152 L218,130 Z',
-    lx: 262, ly: 100,
-  },
-  {
-    key: 'northern',     name: 'Northern',
-    d: 'M98,80 L178,48 L215,93 L218,130 L258,152 L192,168 L108,165 Z',
-    lx: 172, ly: 118,
-  },
-  {
-    key: 'savannah',     name: 'Savannah',
-    d: 'M0,75 L98,80 L108,165 L0,170 Z',
-    lx: 46, ly: 122,
-  },
-  {
-    key: 'oti',          name: 'Oti',
-    d: 'M218,130 L258,152 L278,238 L252,245 L208,218 L203,158 Z',
-    lx: 238, ly: 192,
-  },
-  {
-    key: 'bono',         name: 'Bono',
-    d: 'M0,170 L108,165 L118,252 L0,255 Z',
-    lx: 48, ly: 210,
-  },
-  {
-    key: 'bono_east',    name: 'Bono East',
-    d: 'M108,165 L192,168 L203,158 L208,218 L172,248 L118,252 Z',
-    lx: 155, ly: 202,
-  },
-  {
-    key: 'ahafo',        name: 'Ahafo',
-    d: 'M38,252 L118,252 L112,292 L35,294 Z',
-    lx: 74, ly: 270,
-  },
-  {
-    key: 'western_north', name: 'Western North',
-    d: 'M0,255 L38,252 L35,294 L102,308 L0,342 Z',
-    lx: 30, ly: 296,
-  },
-  {
-    key: 'ashanti',      name: 'Ashanti',
-    d: 'M35,294 L112,292 L172,248 L200,255 L195,336 L88,340 L35,326 Z',
-    lx: 118, ly: 300,
-  },
-  {
-    key: 'eastern',      name: 'Eastern',
-    d: 'M172,248 L208,218 L252,245 L255,338 L190,342 L183,298 Z',
-    lx: 216, ly: 290,
-  },
-  {
-    key: 'volta',        name: 'Volta',
-    d: 'M252,245 L278,238 L300,148 L300,385 L255,385 L252,338 Z',
-    lx: 278, ly: 295,
-  },
-  {
-    key: 'western',      name: 'Western',
-    d: 'M0,342 L88,340 L83,420 L0,420 Z',
-    lx: 40, ly: 380,
-  },
-  {
-    key: 'central',      name: 'Central',
-    d: 'M88,340 L190,342 L192,388 L83,420 Z',
-    lx: 132, ly: 378,
-  },
-  {
-    key: 'greater_accra', name: 'Greater Accra',
-    d: 'M190,342 L252,338 L255,385 L192,388 Z',
-    lx: 220, ly: 360,
-  },
-];
+/* ─── ISO code → DB region name mapping ────────────────────────────────────*/
+const SVG_ID_TO_NAME = {
+  GHAF: 'Ahafo',
+  GHAH: 'Ashanti',
+  GHBO: 'Bono',
+  GHBE: 'Bono East',
+  GHCP: 'Central',
+  GHEP: 'Eastern',
+  GHAA: 'Greater Accra',
+  GHNP: 'North East',
+  GHNE: 'Northern',
+  GHOT: 'Oti',
+  GHSV: 'Savannah',
+  GHUE: 'Upper East',
+  GHUW: 'Upper West',
+  GHTV: 'Volta',
+  GHWP: 'Western',
+  GHWN: 'Western North',
+};
 
-/* Match SVG region key → DB region object by name (case-insensitive, fuzzy) */
+/* Match an SVG name → DB region row (fuzzy) */
 const matchRegion = (regions, svgName) => {
+  if (!svgName) return null;
   const n = svgName.toLowerCase().replace(/\s+/g, ' ').trim();
   return regions.find(r => {
     const rn = (r.region_name || '').toLowerCase().replace(/\s+/g, ' ').trim();
-    return rn === n || rn.includes(n) || n.includes(rn);
+    // Exact or contained match; also handle "Brong-Ahafo" ↔ "Bono"
+    return rn === n || rn.includes(n) || n.includes(rn) ||
+      (n === 'bono' && rn === 'brong-ahafo');
   });
 };
 
@@ -105,40 +40,68 @@ const fmt = (fee) =>
 
 /* ─── Colour helpers ────────────────────────────────────────────────────────*/
 const regionFill = (region, isHovered, isEditing) => {
-  if (!region) return isHovered ? '#374151' : '#1f2937';         // unknown – dark grey
-  if (isEditing) return '#166534';                               // editing – deep green
-  if (region.is_free) return isHovered ? '#16a34a' : '#15803d'; // free – green
-  if (region.delivery_fee > 0) return isHovered ? '#1d4ed8' : '#1e40af'; // priced – blue
-  return isHovered ? '#b45309' : '#92400e';                      // not set – amber
+  if (!region) return isHovered ? '#374151' : '#1f2937';
+  if (isEditing) return '#166534';
+  if (region.is_free) return isHovered ? '#16a34a' : '#15803d';
+  if (region.delivery_fee > 0) return isHovered ? '#1d4ed8' : '#1e40af';
+  return isHovered ? '#b45309' : '#92400e';
 };
 
 const regionStroke = (isEditing, isHovered) => {
   if (isEditing) return '#4ade80';
   if (isHovered) return '#d1fae5';
-  return '#374151';
+  return '#ffffff';
 };
 
 /* ─── Main component ────────────────────────────────────────────────────────*/
 const GhanaDeliveryMap = ({ regions, onSave }) => {
-  const [hovered, setHovered]     = useState(null);   // svg key
-  const [editing, setEditing]     = useState(null);   // { svgKey, region, fee, is_free }
-  const [tooltip, setTooltip]     = useState(null);   // { x, y, svgKey }
-  const [saving, setSaving]       = useState(false);
+  const [paths, setPaths]       = useState([]);      // [{ id, d }]
+  const [viewBox, setViewBox]   = useState('0 0 1000 1000');
+  const [loading, setLoading]   = useState(true);
+  const [hovered, setHovered]   = useState(null);
+  const [editing, setEditing]   = useState(null);
+  const [tooltip, setTooltip]   = useState(null);
+  const [saving, setSaving]     = useState(false);
+  const svgRef                  = useRef(null);
 
-  const handleRegionClick = (svgRegion) => {
-    const dbRegion = matchRegion(regions, svgRegion.name);
+  /* Load & parse the real Ghana SVG once */
+  useEffect(() => {
+    fetch('/images/gh.svg')
+      .then(r => r.text())
+      .then(text => {
+        const parser = new DOMParser();
+        const doc    = parser.parseFromString(text, 'image/svg+xml');
+        const svgEl  = doc.querySelector('svg');
+        if (svgEl) setViewBox(svgEl.getAttribute('viewbox') || svgEl.getAttribute('viewBox') || '0 0 1000 1000');
+        const featureGroup = doc.getElementById('features');
+        const pathEls = featureGroup
+          ? Array.from(featureGroup.querySelectorAll('path'))
+          : Array.from(doc.querySelectorAll('path[id^="GH"]'));
+        const extracted = pathEls
+          .filter(p => SVG_ID_TO_NAME[p.id])
+          .map(p => ({ id: p.id, d: p.getAttribute('d') }));
+        setPaths(extracted);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleRegionClick = (svgId) => {
+    const name    = SVG_ID_TO_NAME[svgId];
+    const dbRegion = matchRegion(regions, name);
     if (!dbRegion) return;
     setEditing({
-      svgKey:  svgRegion.key,
+      svgId,
       region:  dbRegion,
       fee:     dbRegion.delivery_fee ?? 0,
       is_free: !!dbRegion.is_free,
     });
   };
 
-  const handleMouseMove = (e, svgKey) => {
-    const rect = e.currentTarget.closest('svg').getBoundingClientRect();
-    setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top - 12, svgKey });
+  const handleMouseMove = (e, svgId) => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top - 12, svgId });
   };
 
   const handleSave = async () => {
@@ -163,81 +126,63 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
 
       {/* ── SVG Map ──────────────────────────────────────────────────────── */}
       <div className="relative flex-shrink-0 w-full xl:w-auto">
-        <svg
-          viewBox="0 0 300 420"
-          className="w-full max-w-[340px] mx-auto xl:mx-0 drop-shadow-xl select-none"
-          style={{ filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.4))' }}
-        >
-          {REGION_PATHS.map((rp) => {
-            const dbR       = matchRegion(regions, rp.name);
-            const isHovered = hovered === rp.key;
-            const isEditing = editing?.svgKey === rp.key;
-            const fill      = regionFill(dbR, isHovered, isEditing);
-            const stroke    = regionStroke(isEditing, isHovered);
+        {loading ? (
+          <div className="flex items-center justify-center w-full max-w-[340px] mx-auto xl:mx-0 h-[420px]">
+            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+          </div>
+        ) : (
+          <svg
+            ref={svgRef}
+            viewBox={viewBox}
+            className="w-full max-w-[360px] mx-auto xl:mx-0 select-none"
+            style={{ filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.4))' }}
+          >
+            {paths.map(({ id, d }) => {
+              const name      = SVG_ID_TO_NAME[id];
+              const dbR       = matchRegion(regions, name);
+              const isHovered = hovered === id;
+              const isEditing = editing?.svgId === id;
+              const fill      = regionFill(dbR, isHovered, isEditing);
+              const stroke    = regionStroke(isEditing, isHovered);
 
-            return (
-              <g key={rp.key}>
+              return (
                 <path
-                  d={rp.d}
+                  key={id}
+                  d={d}
                   fill={fill}
                   stroke={stroke}
-                  strokeWidth={isEditing ? 2 : 1}
-                  className="cursor-pointer transition-all duration-150"
-                  onMouseEnter={() => setHovered(rp.key)}
+                  strokeWidth={isEditing ? 3 : 1}
+                  className="cursor-pointer transition-colors duration-150"
+                  onMouseEnter={() => setHovered(id)}
                   onMouseLeave={() => { setHovered(null); setTooltip(null); }}
-                  onMouseMove={(e) => handleMouseMove(e, rp.key)}
-                  onClick={() => handleRegionClick(rp)}
+                  onMouseMove={(e) => handleMouseMove(e, id)}
+                  onClick={() => handleRegionClick(id)}
                 />
-                {/* Region label */}
-                <text
-                  x={rp.lx}
-                  y={rp.ly}
-                  textAnchor="middle"
-                  fontSize={rp.name.length > 10 ? '6.5' : '7.5'}
-                  fontWeight="700"
-                  fill="rgba(255,255,255,0.85)"
-                  className="pointer-events-none"
-                  style={{ fontFamily: 'system-ui, sans-serif' }}
-                >
-                  {rp.name.split(' ').map((word, i) => (
-                    <tspan key={i} x={rp.lx} dy={i === 0 ? 0 : 8}>{word}</tspan>
-                  ))}
-                </text>
-                {/* Price badge */}
-                {dbR && (
-                  <text
-                    x={rp.lx}
-                    y={rp.ly + (rp.name.split(' ').length > 1 ? 16 : 10)}
-                    textAnchor="middle"
-                    fontSize="6"
-                    fill="rgba(255,255,255,0.7)"
-                    className="pointer-events-none"
-                    style={{ fontFamily: 'system-ui, sans-serif' }}
-                  >
-                    {dbR.is_free ? 'FREE' : dbR.delivery_fee > 0 ? fmt(dbR.delivery_fee) : '—'}
-                  </text>
-                )}
-              </g>
-            );
-          })}
+              );
+            })}
 
-          {/* SVG tooltip */}
-          {tooltip && hovered && (() => {
-            const rp  = REGION_PATHS.find(r => r.key === hovered);
-            const dbR = rp ? matchRegion(regions, rp.name) : null;
-            if (!rp) return null;
-            const label = dbR
-              ? (dbR.is_free ? 'Free delivery' : dbR.delivery_fee > 0 ? fmt(dbR.delivery_fee) : 'Not set')
-              : 'Unknown region';
-            return (
-              <g transform={`translate(${Math.min(tooltip.x, 240)},${Math.max(tooltip.y - 8, 0)})`}>
-                <rect x="-4" y="-14" width={rp.name.length * 5.5 + 16} height="22" rx="4" fill="rgba(0,0,0,0.85)" />
-                <text x="4" y="-3" fontSize="8" fill="white" fontWeight="700"
-                  style={{ fontFamily: 'system-ui, sans-serif' }}>{rp.name} — {label}</text>
-              </g>
-            );
-          })()}
-        </svg>
+            {/* SVG tooltip */}
+            {tooltip && hovered && (() => {
+              const name = SVG_ID_TO_NAME[hovered];
+              const dbR  = matchRegion(regions, name);
+              const label = dbR
+                ? (dbR.is_free ? 'Free delivery' : dbR.delivery_fee > 0 ? fmt(dbR.delivery_fee) : 'Not set')
+                : 'Unknown';
+              const svgW = parseFloat(viewBox.split(' ')[2]) || 1000;
+              const scaleX = svgRef.current ? svgW / svgRef.current.getBoundingClientRect().width : 1;
+              const tx = Math.min(tooltip.x * scaleX, svgW - 160);
+              const ty = Math.max(tooltip.y * scaleX - 20, 10);
+              const text = `${name} — ${label}`;
+              return (
+                <g transform={`translate(${tx},${ty})`}>
+                  <rect x="-4" y="-14" width={text.length * 6 + 16} height="22" rx="4" fill="rgba(0,0,0,0.85)" />
+                  <text x="4" y="-3" fontSize="12" fill="white" fontWeight="700"
+                    style={{ fontFamily: 'system-ui, sans-serif' }}>{text}</text>
+                </g>
+              );
+            })()}
+          </svg>
+        )}
 
         {/* Legend */}
         <div className="flex flex-wrap gap-3 mt-4 justify-center xl:justify-start">
@@ -308,7 +253,9 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
                 disabled={saving}
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-500 text-white rounded-2xl font-black text-sm uppercase tracking-wider transition-all disabled:opacity-50"
               >
-                {saving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</> : <><Check size={16} /> Save Region</>}
+                {saving
+                  ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>
+                  : <><Check size={16} /> Save Region</>}
               </button>
               <button onClick={() => setEditing(null)} className="px-5 py-3 bg-[var(--bg-secondary)] text-[var(--text-muted)] rounded-2xl font-bold text-sm transition-all hover:bg-[var(--bg-tertiary)]">
                 Cancel
@@ -326,12 +273,10 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
                 <button
                   key={region.id}
                   onClick={() => {
-                    const rp = REGION_PATHS.find(r =>
-                      r.name.toLowerCase() === (region.region_name || '').toLowerCase() ||
-                      (region.region_name || '').toLowerCase().includes(r.name.toLowerCase()) ||
-                      r.name.toLowerCase().includes((region.region_name || '').toLowerCase())
-                    );
-                    if (rp) handleRegionClick(rp);
+                    const svgId = Object.entries(SVG_ID_TO_NAME).find(
+                      ([, name]) => matchRegion([region], name)
+                    )?.[0];
+                    if (svgId) handleRegionClick(svgId);
                   }}
                   className="w-full flex items-center justify-between px-6 py-3.5 hover:bg-[var(--bg-secondary)] transition-colors text-left group"
                 >
