@@ -18,7 +18,7 @@ Expert Office Furnish is a premium, high-end E-commerce and Workspace Solutions 
 ---
 
 ## 👥 Contributors
-- **RealKofi** - Lead Developer & Visionary
+- **Nana Kofi Djan** - Lead Developer & Visionary
 
 ---
 
