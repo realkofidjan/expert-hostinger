@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
+import GhanaDeliveryMap from '../../components/admin/GhanaDeliveryMap';
 import {
   ToggleLeft, ToggleRight, MapPin, CreditCard,
-  Save, Smartphone, Banknote, Truck, Pencil, Check, X, AlertTriangle,
+  Save, Smartphone, Banknote, Truck, Check, X, AlertTriangle,
   Trash2, Download, Upload, Construction, RotateCcw, CheckCircle2,
   ShieldCheck, Lock, Users, Globe, Mail, Phone, Link2, Clock, AtSign, Building2
 } from 'lucide-react';
@@ -70,7 +71,6 @@ const AdminSettings = () => {
   // Delivery
   const [regions, setRegions] = useState([]);
   const [regionsLoading, setRegionsLoading] = useState(true);
-  const [editingRegion, setEditingRegion] = useState(null);
 
   // Permissions
   const [permDefinitions, setPermDefinitions] = useState([]);
@@ -405,60 +405,18 @@ const AdminSettings = () => {
         {/* ══════════════════════════════════════════════════════════════════ */}
         {activeTab === 'delivery' && (
           <Section icon={<Truck size={20} className="text-purple-500" />} title="Delivery Regions & Pricing">
-            <p className="text-sm text-[var(--text-muted)] -mt-2 mb-4">
-              Set delivery fees per Ghana region. Toggle free delivery for applicable areas.
-              Click the <Pencil size={12} className="inline" /> icon to edit a region.
+            <p className="text-sm text-[var(--text-muted)] -mt-2 mb-6">
+              Click any region on the map to set its delivery fee. Green = free, blue = fixed fee, amber = not configured.
             </p>
             {regionsLoading ? (
-              <div className="flex items-center gap-2 text-[var(--text-muted)] py-4">
+              <div className="flex items-center gap-2 text-[var(--text-muted)] py-8">
                 <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" /> Loading regions...
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {regions.map(region => (
-                  <div key={region.id} className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${editingRegion?.id === region.id ? 'border-green-500/40 bg-green-500/5' : 'border-[var(--border-color)] bg-[var(--bg-secondary)]'}`}>
-                    <div className="flex-1">
-                      <span className="font-bold text-sm text-[var(--text-primary)]">{region.region_name}</span>
-                      {region.is_free && <span className="ml-2 text-[10px] font-black text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">Free</span>}
-                    </div>
-                    {editingRegion?.id === region.id ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <label className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-medium cursor-pointer">
-                          <input type="checkbox" checked={editingRegion.is_free}
-                            onChange={e => setEditingRegion(r => ({ ...r, is_free: e.target.checked, delivery_fee: e.target.checked ? 0 : r.delivery_fee }))}
-                            className="accent-green-500"
-                          /> Free
-                        </label>
-                        {!editingRegion.is_free && (
-                          <div className="flex items-center gap-1 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-3 py-1.5">
-                            <span className="text-xs text-[var(--text-muted)] font-bold">₵</span>
-                            <input type="number" step="0.01" min="0" value={editingRegion.delivery_fee}
-                              onChange={e => setEditingRegion(r => ({ ...r, delivery_fee: e.target.value }))}
-                              className="w-20 text-sm font-bold text-[var(--text-primary)] bg-transparent outline-none"
-                            />
-                          </div>
-                        )}
-                        <button onClick={() => saveRegion(editingRegion)} className="p-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"><Check size={14} /></button>
-                        <button onClick={() => setEditingRegion(null)} className="p-2 bg-[var(--bg-tertiary)] text-[var(--text-muted)] rounded-xl hover:text-red-500 transition-colors"><X size={14} /></button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-[var(--text-primary)]">
-                          {region.is_free ? 'Free' : region.delivery_fee > 0
-                            ? `₵${parseFloat(region.delivery_fee).toLocaleString('en-GH', { minimumFractionDigits: 2 })}`
-                            : <span className="text-amber-500 text-xs font-bold">Not set</span>}
-                        </span>
-                        <button
-                          onClick={() => setEditingRegion({ id: region.id, region_name: region.region_name, delivery_fee: region.delivery_fee, is_free: region.is_free, is_active: region.is_active })}
-                          className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-lg text-[var(--text-muted)] hover:text-green-500 transition-colors"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <GhanaDeliveryMap
+                regions={regions}
+                onSave={saveRegion}
+              />
             )}
           </Section>
         )}
