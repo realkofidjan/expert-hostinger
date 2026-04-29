@@ -48,33 +48,30 @@ const DEFAULTS = {
  * Returns the full permission matrix for all non-admin roles
  */
 const getPermissions = async (req, res) => {
+  // Start with a fully-defaulted matrix so we always return something valid
+  const matrix = { 'sub-admin': {}, staff: {} };
+  for (const role of ['sub-admin', 'staff']) {
+    for (const perm of ALL_PERMISSIONS) {
+      matrix[role][perm.key] = DEFAULTS[role]?.[perm.key] ?? false;
+    }
+  }
+
   try {
     const [rows] = await db.query(
       'SELECT role, permission_key, enabled FROM role_permissions'
     );
-
-    // Build map from DB rows
-    const matrix = { 'sub-admin': {}, staff: {} };
+    // Overlay DB values on top of defaults
     for (const row of rows) {
       if (matrix[row.role] !== undefined) {
         matrix[row.role][row.permission_key] = !!row.enabled;
       }
     }
-
-    // Fill in any missing keys with defaults
-    for (const role of ['sub-admin', 'staff']) {
-      for (const perm of ALL_PERMISSIONS) {
-        if (matrix[role][perm.key] === undefined) {
-          matrix[role][perm.key] = DEFAULTS[role]?.[perm.key] ?? false;
-        }
-      }
-    }
-
-    res.json({ permissions: matrix, definitions: ALL_PERMISSIONS });
   } catch (error) {
-    console.error('GET_PERMISSIONS_ERROR:', error);
-    res.status(500).json({ error: 'Server error', details: error.message });
+    // Table might not exist yet (migration pending) — return defaults with a warning
+    console.warn('GET_PERMISSIONS_WARNING (returning defaults):', error.message);
   }
+
+  res.json({ permissions: matrix, definitions: ALL_PERMISSIONS });
 };
 
 /**

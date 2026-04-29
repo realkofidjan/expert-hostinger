@@ -514,7 +514,22 @@ const db = require('./src/config/db');
   try {
     const { DEFAULTS, ALL_PERMISSIONS } = require('./src/controllers/PermissionsController');
     const [rpExists] = await db.query("SHOW TABLES LIKE 'role_permissions'");
-    if (rpExists.length === 0) {
+
+    let needsCreate = rpExists.length === 0;
+
+    if (!needsCreate) {
+      // Table exists — verify it has the expected columns
+      const [existingCols] = await db.query('SHOW COLUMNS FROM role_permissions');
+      const colNames = existingCols.map(c => c.Field);
+      if (!colNames.includes('role') || !colNames.includes('permission_key') || !colNames.includes('enabled')) {
+        // Wrong schema (pre-existing table from old design) — drop and recreate
+        await db.query('DROP TABLE role_permissions');
+        console.log('Migration: dropped role_permissions (incompatible schema)');
+        needsCreate = true;
+      }
+    }
+
+    if (needsCreate) {
       await db.query(`
         CREATE TABLE role_permissions (
           id INT AUTO_INCREMENT PRIMARY KEY,
@@ -537,6 +552,17 @@ const db = require('./src/config/db');
         }
       }
       console.log('Migration: seeded role_permissions with defaults');
+    } else {
+      // Table exists with correct schema — ensure all current permissions are seeded (fills gaps from new permissions)
+      for (const role of ['sub-admin', 'staff']) {
+        for (const perm of ALL_PERMISSIONS) {
+          const enabled = DEFAULTS[role]?.[perm.key] ? 1 : 0;
+          await db.query(
+            'INSERT IGNORE INTO role_permissions (role, permission_key, enabled) VALUES (?, ?, ?)',
+            [role, perm.key, enabled]
+          );
+        }
+      }
     }
   } catch (e) {
     console.warn('Migration (role_permissions) error:', e.message);
