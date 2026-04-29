@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Check, X, MapPin, Loader2 } from 'lucide-react';
 
-/* ─── ISO code → DB region name mapping ────────────────────────────────────*/
+/* ─── ISO code → display name ───────────────────────────────────────────────*/
 const SVG_ID_TO_NAME = {
   GHAF: 'Ahafo',
   GHAH: 'Ashanti',
@@ -21,48 +21,53 @@ const SVG_ID_TO_NAME = {
   GHWN: 'Western North',
 };
 
+/* ─── Unique colour per region ──────────────────────────────────────────────
+   Full-saturation hex (used for stroke + active states).
+   Fill is rendered at 30% opacity via fillOpacity.
+──────────────────────────────────────────────────────────────────────────────*/
+const REGION_COLOR = {
+  GHAF: '#f97316', // orange
+  GHAH: '#8b5cf6', // violet
+  GHBO: '#06b6d4', // cyan
+  GHBE: '#ec4899', // pink
+  GHCP: '#22c55e', // green
+  GHEP: '#f59e0b', // amber
+  GHAA: '#3b82f6', // blue
+  GHNP: '#84cc16', // lime
+  GHNE: '#14b8a6', // teal
+  GHOT: '#a855f7', // purple
+  GHSV: '#ef4444', // red
+  GHUE: '#10b981', // emerald
+  GHUW: '#0ea5e9', // sky
+  GHTV: '#d946ef', // fuchsia
+  GHWP: '#fb923c', // orange-400
+  GHWN: '#34d399', // emerald-400
+};
+
 /* Match an SVG name → DB region row (fuzzy) */
 const matchRegion = (regions, svgName) => {
   if (!svgName) return null;
   const n = svgName.toLowerCase().replace(/\s+/g, ' ').trim();
   return regions.find(r => {
     const rn = (r.region_name || '').toLowerCase().replace(/\s+/g, ' ').trim();
-    // Exact or contained match; also handle "Brong-Ahafo" ↔ "Bono"
     return rn === n || rn.includes(n) || n.includes(rn) ||
       (n === 'bono' && rn === 'brong-ahafo');
   });
 };
 
 const fmt = (fee) =>
-  fee > 0
-    ? `₵${parseFloat(fee).toLocaleString('en-GH', { minimumFractionDigits: 2 })}`
-    : null;
-
-/* ─── Colour helpers ────────────────────────────────────────────────────────*/
-const regionFill = (region, isHovered, isEditing) => {
-  if (!region) return isHovered ? '#374151' : '#1f2937';
-  if (isEditing) return '#166534';
-  if (region.is_free) return isHovered ? '#16a34a' : '#15803d';
-  if (region.delivery_fee > 0) return isHovered ? '#1d4ed8' : '#1e40af';
-  return isHovered ? '#b45309' : '#92400e';
-};
-
-const regionStroke = (isEditing, isHovered) => {
-  if (isEditing) return '#4ade80';
-  if (isHovered) return '#d1fae5';
-  return '#ffffff';
-};
+  fee > 0 ? `₵${parseFloat(fee).toLocaleString('en-GH', { minimumFractionDigits: 2 })}` : null;
 
 /* ─── Main component ────────────────────────────────────────────────────────*/
 const GhanaDeliveryMap = ({ regions, onSave }) => {
-  const [paths, setPaths]       = useState([]);      // [{ id, d }]
-  const [viewBox, setViewBox]   = useState('0 0 1000 1000');
-  const [loading, setLoading]   = useState(true);
-  const [hovered, setHovered]   = useState(null);
-  const [editing, setEditing]   = useState(null);
-  const [tooltip, setTooltip]   = useState(null);
-  const [saving, setSaving]     = useState(false);
-  const svgRef                  = useRef(null);
+  const [paths, setPaths]     = useState([]);
+  const [viewBox, setViewBox] = useState('0 0 1000 1000');
+  const [loading, setLoading] = useState(true);
+  const [hovered, setHovered] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [tooltip, setTooltip] = useState(null);
+  const [saving, setSaving]   = useState(false);
+  const svgRef                = useRef(null);
 
   /* Load & parse the real Ghana SVG once */
   useEffect(() => {
@@ -72,7 +77,13 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
         const parser = new DOMParser();
         const doc    = parser.parseFromString(text, 'image/svg+xml');
         const svgEl  = doc.querySelector('svg');
-        if (svgEl) setViewBox(svgEl.getAttribute('viewbox') || svgEl.getAttribute('viewBox') || '0 0 1000 1000');
+        if (svgEl) {
+          setViewBox(
+            svgEl.getAttribute('viewbox') ||
+            svgEl.getAttribute('viewBox') ||
+            '0 0 1000 1000'
+          );
+        }
         const featureGroup = doc.getElementById('features');
         const pathEls = featureGroup
           ? Array.from(featureGroup.querySelectorAll('path'))
@@ -87,7 +98,7 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
   }, []);
 
   const handleRegionClick = (svgId) => {
-    const name    = SVG_ID_TO_NAME[svgId];
+    const name     = SVG_ID_TO_NAME[svgId];
     const dbRegion = matchRegion(regions, name);
     if (!dbRegion) return;
     setEditing({
@@ -101,7 +112,7 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
   const handleMouseMove = (e, svgId) => {
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top - 12, svgId });
+    setTooltip({ x: e.clientX - rect.left, y: e.clientY - rect.top, svgId });
   };
 
   const handleSave = async () => {
@@ -121,95 +132,115 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
     }
   };
 
+  /* Build a tooltip string */
+  const tooltipLabel = (svgId) => {
+    const name = SVG_ID_TO_NAME[svgId];
+    const dbR  = matchRegion(regions, name);
+    const fee  = dbR
+      ? (dbR.is_free ? 'Free delivery' : dbR.delivery_fee > 0 ? fmt(dbR.delivery_fee) : 'Not set')
+      : '—';
+    return `${name}  ·  ${fee}`;
+  };
+
   return (
     <div className="flex flex-col xl:flex-row gap-6 items-start">
 
       {/* ── SVG Map ──────────────────────────────────────────────────────── */}
       <div className="relative flex-shrink-0 w-full xl:w-auto">
         {loading ? (
-          <div className="flex items-center justify-center w-full max-w-[340px] mx-auto xl:mx-0 h-[420px]">
+          <div className="flex items-center justify-center w-full max-w-[360px] mx-auto h-[420px]">
             <Loader2 className="w-8 h-8 animate-spin text-green-500" />
           </div>
         ) : (
-          <svg
-            ref={svgRef}
-            viewBox={viewBox}
-            className="w-full max-w-[360px] mx-auto xl:mx-0 select-none"
-            style={{ filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.4))' }}
-          >
-            {paths.map(({ id, d }) => {
-              const name      = SVG_ID_TO_NAME[id];
-              const dbR       = matchRegion(regions, name);
-              const isHovered = hovered === id;
-              const isEditing = editing?.svgId === id;
-              const fill      = regionFill(dbR, isHovered, isEditing);
-              const stroke    = regionStroke(isEditing, isHovered);
+          <div className="relative">
+            <svg
+              ref={svgRef}
+              viewBox={viewBox}
+              className="w-full max-w-[360px] mx-auto xl:mx-0 select-none rounded-2xl overflow-visible"
+              style={{ filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.35))' }}
+            >
+              {paths.map(({ id, d }) => {
+                const color     = REGION_COLOR[id] || '#6b7280';
+                const isHovered = hovered === id;
+                const isEditing = editing?.svgId === id;
 
-              return (
-                <path
-                  key={id}
-                  d={d}
-                  fill={fill}
-                  stroke={stroke}
-                  strokeWidth={isEditing ? 3 : 1}
-                  className="cursor-pointer transition-colors duration-150"
-                  onMouseEnter={() => setHovered(id)}
-                  onMouseLeave={() => { setHovered(null); setTooltip(null); }}
-                  onMouseMove={(e) => handleMouseMove(e, id)}
-                  onClick={() => handleRegionClick(id)}
-                />
-              );
-            })}
+                return (
+                  <path
+                    key={id}
+                    d={d}
+                    fill={color}
+                    fillOpacity={isEditing ? 0.75 : isHovered ? 0.55 : 0.3}
+                    stroke={color}
+                    strokeWidth={isEditing ? 4 : isHovered ? 3 : 1}
+                    strokeOpacity={isEditing ? 1 : isHovered ? 0.9 : 0.5}
+                    strokeLinejoin="round"
+                    className="cursor-pointer transition-all duration-150"
+                    onMouseEnter={() => setHovered(id)}
+                    onMouseLeave={() => { setHovered(null); setTooltip(null); }}
+                    onMouseMove={(e) => handleMouseMove(e, id)}
+                    onClick={() => handleRegionClick(id)}
+                  />
+                );
+              })}
+            </svg>
 
-            {/* SVG tooltip */}
-            {tooltip && hovered && (() => {
-              const name = SVG_ID_TO_NAME[hovered];
-              const dbR  = matchRegion(regions, name);
-              const label = dbR
-                ? (dbR.is_free ? 'Free delivery' : dbR.delivery_fee > 0 ? fmt(dbR.delivery_fee) : 'Not set')
-                : 'Unknown';
-              const svgW = parseFloat(viewBox.split(' ')[2]) || 1000;
-              const scaleX = svgRef.current ? svgW / svgRef.current.getBoundingClientRect().width : 1;
-              const tx = Math.min(tooltip.x * scaleX, svgW - 160);
-              const ty = Math.max(tooltip.y * scaleX - 20, 10);
-              const text = `${name} — ${label}`;
-              return (
-                <g transform={`translate(${tx},${ty})`}>
-                  <rect x="-4" y="-14" width={text.length * 6 + 16} height="22" rx="4" fill="rgba(0,0,0,0.85)" />
-                  <text x="4" y="-3" fontSize="12" fill="white" fontWeight="700"
-                    style={{ fontFamily: 'system-ui, sans-serif' }}>{text}</text>
-                </g>
-              );
-            })()}
-          </svg>
+            {/* Floating tooltip — rendered outside SVG so it's never clipped */}
+            {tooltip && hovered && (
+              <div
+                className="pointer-events-none absolute z-50 px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-xl whitespace-nowrap"
+                style={{
+                  background: REGION_COLOR[hovered] || '#374151',
+                  left: Math.min(tooltip.x + 12, 300),
+                  top: Math.max(tooltip.y - 36, 0),
+                  transform: 'translateX(-50%)',
+                }}
+              >
+                {tooltipLabel(hovered)}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-3 mt-4 justify-center xl:justify-start">
-          {[
-            { color: '#15803d', label: 'Free delivery' },
-            { color: '#1e40af', label: 'Fixed fee set' },
-            { color: '#92400e', label: 'Not configured' },
-          ].map(l => (
-            <div key={l.label} className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
-              <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: l.color }} />
-              {l.label}
-            </div>
-          ))}
+        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1.5 max-w-[360px] mx-auto xl:mx-0">
+          {Object.entries(SVG_ID_TO_NAME).map(([id, name]) => {
+            const dbR  = matchRegion(regions, name);
+            const fee  = dbR
+              ? (dbR.is_free ? 'Free' : dbR.delivery_fee > 0 ? fmt(dbR.delivery_fee) : '—')
+              : '—';
+            return (
+              <div key={id} className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+                <span
+                  className="w-2.5 h-2.5 rounded-sm flex-shrink-0 border"
+                  style={{ background: REGION_COLOR[id] + '55', borderColor: REGION_COLOR[id] }}
+                />
+                <span className="truncate">{name}</span>
+                <span className="ml-auto font-bold" style={{ color: REGION_COLOR[id] }}>{fee}</span>
+              </div>
+            );
+          })}
         </div>
-        <p className="text-xs text-[var(--text-muted)] mt-2 text-center xl:text-left">Click a region to set its delivery fee</p>
+        <p className="text-xs text-[var(--text-muted)] mt-3 text-center xl:text-left">
+          Click a region to set its delivery fee
+        </p>
       </div>
 
       {/* ── Editor Panel ─────────────────────────────────────────────────── */}
       <div className="flex-1 w-full">
         {editing ? (
-          <div className="glass p-6 rounded-[2rem] border border-green-500/30 shadow-xl space-y-5 animate-fadeIn">
+          <div className="glass p-6 rounded-[2rem] shadow-xl space-y-5 animate-fadeIn"
+            style={{ borderColor: REGION_COLOR[editing.svgId] + '55', borderWidth: 1, borderStyle: 'solid' }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MapPin size={18} className="text-green-500" />
+                <div className="w-3 h-3 rounded-full" style={{ background: REGION_COLOR[editing.svgId] }} />
+                <MapPin size={18} style={{ color: REGION_COLOR[editing.svgId] }} />
                 <h3 className="font-black text-[var(--text-primary)]">{editing.region.region_name}</h3>
               </div>
-              <button onClick={() => setEditing(null)} className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition-colors">
+              <button
+                onClick={() => setEditing(null)}
+                className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-muted)] transition-colors"
+              >
                 <X size={16} />
               </button>
             </div>
@@ -217,13 +248,19 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
             {/* Free toggle */}
             <div
               onClick={() => setEditing(e => ({ ...e, is_free: !e.is_free, fee: !e.is_free ? 0 : e.fee }))}
-              className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${editing.is_free ? 'border-green-500/40 bg-green-500/5' : 'border-[var(--border-color)] bg-[var(--bg-secondary)]'}`}
+              className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                editing.is_free
+                  ? 'border-green-500/40 bg-green-500/5'
+                  : 'border-[var(--border-color)] bg-[var(--bg-secondary)]'
+              }`}
             >
               <div>
                 <p className="font-bold text-sm text-[var(--text-primary)]">Free Delivery</p>
                 <p className="text-xs text-[var(--text-muted)]">No charge for this region</p>
               </div>
-              <div className={`w-10 h-6 rounded-full flex items-center transition-all ${editing.is_free ? 'bg-green-500 justify-end' : 'bg-[var(--bg-tertiary)] justify-start'}`}>
+              <div className={`w-10 h-6 rounded-full flex items-center transition-all ${
+                editing.is_free ? 'bg-green-500 justify-end' : 'bg-[var(--bg-tertiary)] justify-start'
+              }`}>
                 <div className="w-5 h-5 rounded-full bg-white shadow-sm mx-0.5" />
               </div>
             </div>
@@ -231,7 +268,9 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
             {/* Fee input */}
             {!editing.is_free && (
               <div>
-                <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-2">Delivery Fee (₵)</label>
+                <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest block mb-2">
+                  Delivery Fee (₵)
+                </label>
                 <div className="flex items-center gap-2 bg-[var(--bg-secondary)] border-2 border-transparent focus-within:border-green-500/50 rounded-2xl px-4 py-3 transition-all">
                   <span className="text-[var(--text-muted)] font-bold text-lg">₵</span>
                   <input
@@ -251,43 +290,61 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-500 text-white rounded-2xl font-black text-sm uppercase tracking-wider transition-all disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 py-3 text-white rounded-2xl font-black text-sm uppercase tracking-wider transition-all disabled:opacity-50"
+                style={{ background: REGION_COLOR[editing.svgId] }}
               >
                 {saving
                   ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>
                   : <><Check size={16} /> Save Region</>}
               </button>
-              <button onClick={() => setEditing(null)} className="px-5 py-3 bg-[var(--bg-secondary)] text-[var(--text-muted)] rounded-2xl font-bold text-sm transition-all hover:bg-[var(--bg-tertiary)]">
+              <button
+                onClick={() => setEditing(null)}
+                className="px-5 py-3 bg-[var(--bg-secondary)] text-[var(--text-muted)] rounded-2xl font-bold text-sm transition-all hover:bg-[var(--bg-tertiary)]"
+              >
                 Cancel
               </button>
             </div>
           </div>
         ) : (
-          /* Region list (scrollable summary) */
+          /* Region list */
           <div className="glass rounded-[2rem] border border-[var(--border-color)] overflow-hidden">
             <div className="px-6 py-4 border-b border-[var(--border-color)]">
-              <h3 className="font-black text-sm text-[var(--text-primary)] uppercase tracking-widest">All Regions</h3>
+              <h3 className="font-black text-sm text-[var(--text-primary)] uppercase tracking-widest">
+                All Regions
+              </h3>
             </div>
             <div className="divide-y divide-[var(--border-color)] max-h-[420px] overflow-y-auto">
-              {regions.map(region => (
-                <button
-                  key={region.id}
-                  onClick={() => {
-                    const svgId = Object.entries(SVG_ID_TO_NAME).find(
-                      ([, name]) => matchRegion([region], name)
-                    )?.[0];
-                    if (svgId) handleRegionClick(svgId);
-                  }}
-                  className="w-full flex items-center justify-between px-6 py-3.5 hover:bg-[var(--bg-secondary)] transition-colors text-left group"
-                >
-                  <span className="font-bold text-sm text-[var(--text-primary)] group-hover:text-green-500 transition-colors">
-                    {region.region_name}
-                  </span>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${region.is_free ? 'bg-green-500/15 text-green-500' : region.delivery_fee > 0 ? 'bg-blue-500/15 text-blue-400' : 'bg-amber-500/15 text-amber-500'}`}>
-                    {region.is_free ? 'Free' : region.delivery_fee > 0 ? fmt(region.delivery_fee) : 'Not set'}
-                  </span>
-                </button>
-              ))}
+              {Object.entries(SVG_ID_TO_NAME).map(([svgId, svgName]) => {
+                const region = matchRegion(regions, svgName);
+                const color  = REGION_COLOR[svgId];
+                return (
+                  <button
+                    key={svgId}
+                    onClick={() => { if (region) handleRegionClick(svgId); }}
+                    disabled={!region}
+                    className="w-full flex items-center gap-3 px-6 py-3.5 hover:bg-[var(--bg-secondary)] transition-colors text-left group disabled:opacity-40"
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ background: color }}
+                    />
+                    <span className="font-bold text-sm text-[var(--text-primary)] group-hover:text-[var(--text-primary)] transition-colors flex-1">
+                      {region?.region_name || svgName}
+                    </span>
+                    <span
+                      className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+                      style={{
+                        background: color + '22',
+                        color,
+                      }}
+                    >
+                      {region
+                        ? (region.is_free ? 'Free' : region.delivery_fee > 0 ? fmt(region.delivery_fee) : 'Not set')
+                        : '—'}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

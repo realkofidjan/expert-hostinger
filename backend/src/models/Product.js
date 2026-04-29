@@ -169,7 +169,13 @@ const Product = {
         }
 
         if (reqFilters?.onSale === 'true') {
-            sql += " AND p.discount_price IS NOT NULL AND p.discount_price > 0";
+            sql += ` AND EXISTS (
+                SELECT 1 FROM sales sal
+                WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
+                  AND (sal.scope = 'all'
+                    OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
+                    OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+            )`;
         }
 
         if (reqFilters?.isFeatured === 'true') {
@@ -228,7 +234,13 @@ const Product = {
         }
 
         if (reqFilters?.onSale === 'true') {
-            sql += " AND p.discount_price IS NOT NULL AND p.discount_price > 0";
+            sql += ` AND EXISTS (
+                SELECT 1 FROM sales sal
+                WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
+                  AND (sal.scope = 'all'
+                    OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
+                    OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+            )`;
         }
 
         if (reqFilters?.isFeatured === 'true') {
