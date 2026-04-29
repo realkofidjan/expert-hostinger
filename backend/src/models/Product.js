@@ -107,7 +107,24 @@ const Product = {
     getAll: async ({ limit, offset, categoryId, search, status = 'active', ...reqFilters } = {}) => {
         let sql = `
             SELECT p.*, c.name as category_name, s.name as subcategory_name,
-                   (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as primary_image
+                   (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as primary_image,
+                   (SELECT CASE WHEN sal.type = 'percentage' THEN ROUND(GREATEST(0, p.price * (1 - sal.value/100)), 2)
+                                ELSE ROUND(GREATEST(0, p.price - sal.value), 2) END
+                    FROM sales sal
+                    WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
+                      AND (sal.scope = 'all'
+                        OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
+                        OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+                    ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
+                    LIMIT 1) as sale_price,
+                   (SELECT sal.name
+                    FROM sales sal
+                    WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
+                      AND (sal.scope = 'all'
+                        OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
+                        OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+                    ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
+                    LIMIT 1) as active_sale_name
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN subcategories s ON p.subcategory_id = s.id
@@ -227,11 +244,30 @@ const Product = {
      * @param   {number|string} id
      */
     getById: async (id) => {
-        const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [id]);
+        const [rows] = await db.query(`
+            SELECT p.*,
+                   (SELECT CASE WHEN sal.type = 'percentage' THEN ROUND(GREATEST(0, p.price * (1 - sal.value/100)), 2)
+                                ELSE ROUND(GREATEST(0, p.price - sal.value), 2) END
+                    FROM sales sal
+                    WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
+                      AND (sal.scope = 'all'
+                        OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
+                        OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+                    ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
+                    LIMIT 1) as sale_price,
+                   (SELECT sal.name
+                    FROM sales sal
+                    WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
+                      AND (sal.scope = 'all'
+                        OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
+                        OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+                    ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
+                    LIMIT 1) as active_sale_name
+            FROM products p WHERE p.id = ?`, [id]);
         if (rows.length === 0) return null;
 
         const product = rows[0];
-        
+
         // Fetch images
         const [images] = await db.query('SELECT image_url, is_primary FROM product_images WHERE product_id = ?', [id]);
         product.images = images;

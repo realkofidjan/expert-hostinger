@@ -130,7 +130,7 @@ const ProductDetail = () => {
       name: product.name,
       variant: selectedVariant?.color_name || null,
       image: images[0] || null,
-      price: product.price + (parseFloat(selectedVariant?.price_extra) || 0),
+      price: (product.sale_price != null ? parseFloat(product.sale_price) : parseFloat(product.price)) + (parseFloat(selectedVariant?.price_extra) || 0),
     }, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -336,13 +336,31 @@ Could you please provide a formal quote for this?`;
             </h1>
 
             <div className="flex items-baseline gap-4 mb-8">
-              <span className="text-4xl font-black text-gray-900 dark:text-white text-green-600">
-                ₵{parseFloat(product.price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
-              </span>
-              {product.discount_price > 0 && (
-                <span className="text-xl text-gray-400 line-through font-bold">
-                  ₵{parseFloat(product.discount_price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
-                </span>
+              {product.sale_price != null ? (
+                <>
+                  <span className="text-4xl font-black text-red-500">
+                    ₵{parseFloat(product.sale_price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-xl text-gray-400 line-through font-bold">
+                    ₵{parseFloat(product.price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
+                  </span>
+                  {product.active_sale_name && (
+                    <span className="text-xs font-black bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                      {product.active_sale_name}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="text-4xl font-black text-green-600">
+                    ₵{parseFloat(product.price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
+                  </span>
+                  {product.discount_price > 0 && (
+                    <span className="text-xl text-gray-400 line-through font-bold">
+                      ₵{parseFloat(product.discount_price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
+                    </span>
+                  )}
+                </>
               )}
             </div>
 
