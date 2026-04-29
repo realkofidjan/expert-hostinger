@@ -4,10 +4,11 @@ import {
   ArrowRight, Star, Shield, Truck, CheckCircle,
   ChevronLeft, ChevronRight, Sparkles, Zap, Award, Users,
   ShoppingBag, Eye, RefreshCw, Mail, Phone, MapPin, Send, Loader2,
-  LayoutDashboard, Wrench, Layers, Activity
+  LayoutDashboard, Wrench, Layers, Activity, Clock
 } from 'lucide-react';
 import MainNavbar from '../components/MainNavbar';
 import MainFooter from '../components/MainFooter';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 import api from '../api';
 import { LogoCloud } from '../components/ui/LogoCloud';
 import { motion, useScroll, useTransform } from 'framer-motion';
@@ -211,6 +212,7 @@ TestimonialsSection.displayName = 'TestimonialsSection';
 
 // ─── Home Page ────────────────────────────────────────────────────────────────
 const Home = () => {
+  const siteSettings = useSiteSettings();
   const [products, setProducts] = useState([]);
   const [blogs, setBlogs] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
@@ -935,7 +937,7 @@ const Home = () => {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12 mb-12 max-w-7xl mx-auto">
-            {/* Contact Form */}
+            {/* ── Contact Form ── */}
             <div className="bg-gray-50 dark:bg-gray-800 rounded-[2.5rem] p-8 md:p-10 border border-gray-100 dark:border-gray-700">
               {contactDone ? (
                 <div className="flex flex-col items-center justify-center h-full py-16 text-center">
@@ -1014,18 +1016,91 @@ const Home = () => {
               )}
             </div>
 
-            {/* Map */}
-            <div className="rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-700 min-h-[500px]">
-              <iframe
-                title="Expert Office Furnish Location"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3970.2273646545197!2d-0.23428182410300186!3d5.680247094301138!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xfdf9f59f1bee637%3A0x4d77b3c520395c25!2sEXPERT%20OFFICE%20FURNISH%20CO.%20LTD.!5e0!3m2!1sen!2sgh!4v1712483840000!5m2!1sen!2sgh"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
+            {/* ── Contact Info + Map ── */}
+            <div className="flex flex-col gap-6">
+
+              {/* Live contact details card */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-[2.5rem] p-8 border border-gray-100 dark:border-gray-700 space-y-6">
+                <h3 className="text-xl font-black text-gray-900 dark:text-white">Get in touch directly</h3>
+
+                {/* Phone */}
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-2xl bg-green-500/10 flex items-center justify-center flex-shrink-0 text-green-600">
+                    <Phone size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Phone</p>
+                    <div className="space-y-0.5">
+                      {(siteSettings.company_phone || '+233 244 371593').split(',').map((n, i) => (
+                        <a key={i} href={`tel:${n.trim().replace(/\s/g, '')}`}
+                          className="block text-gray-900 dark:text-white font-semibold hover:text-green-600 transition-colors">
+                          {n.trim()}
+                        </a>
+                      ))}
+                      {siteSettings.company_secondary_phone && (
+                        <a href={`tel:${siteSettings.company_secondary_phone.replace(/\s/g, '')}`}
+                          className="block text-gray-900 dark:text-white font-semibold hover:text-green-600 transition-colors">
+                          {siteSettings.company_secondary_phone}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email */}
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-2xl bg-yellow-500/10 flex items-center justify-center flex-shrink-0 text-yellow-600">
+                    <Mail size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Email</p>
+                    <a href={`mailto:${siteSettings.company_email || 'sales@expertofficefurnish.com'}`}
+                      className="text-gray-900 dark:text-white font-semibold hover:text-yellow-600 transition-colors break-all">
+                      {siteSettings.company_email || 'sales@expertofficefurnish.com'}
+                    </a>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 text-blue-600">
+                    <MapPin size={20} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Location</p>
+                    <p className="text-gray-900 dark:text-white font-semibold">
+                      {siteSettings.pickup_address || siteSettings.store_address || 'Atomic Hills Estate Road, Near ASI PLAZA'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Business Hours */}
+                {siteSettings.business_hours && (
+                  <div className="flex items-start gap-4">
+                    <div className="w-11 h-11 rounded-2xl bg-purple-500/10 flex items-center justify-center flex-shrink-0 text-purple-600">
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Hours</p>
+                      <p className="text-gray-900 dark:text-white font-semibold">{siteSettings.business_hours}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Map */}
+              <div className="rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-700 flex-1 min-h-[280px]">
+                <iframe
+                  title="Expert Office Furnish Location"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3970.2273646545197!2d-0.23428182410300186!3d5.680247094301138!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0xfdf9f59f1bee637%3A0x4d77b3c520395c25!2sEXPERT%20OFFICE%20FURNISH%20CO.%20LTD.!5e0!3m2!1sen!2sgh!4v1712483840000!5m2!1sen!2sgh"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0, minHeight: '280px' }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
             </div>
           </div>
         </div>

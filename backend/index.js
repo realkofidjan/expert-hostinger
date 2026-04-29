@@ -546,8 +546,8 @@ const db = require('./src/config/db');
         for (const perm of ALL_PERMISSIONS) {
           const enabled = DEFAULTS[role]?.[perm.key] ? 1 : 0;
           await db.query(
-            'INSERT IGNORE INTO role_permissions (role, permission_key, enabled) VALUES (?, ?, ?)',
-            [role, perm.key, enabled]
+            'INSERT INTO role_permissions (role, permission_key, enabled) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE enabled = ?',
+            [role, perm.key, enabled, enabled]
           );
         }
       }

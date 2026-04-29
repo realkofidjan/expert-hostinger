@@ -2,15 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import {
-  Settings, ToggleLeft, ToggleRight, MapPin, CreditCard,
+  ToggleLeft, ToggleRight, MapPin, CreditCard,
   Save, Smartphone, Banknote, Truck, Pencil, Check, X, AlertTriangle,
   Trash2, Download, Upload, Construction, RotateCcw, CheckCircle2,
-  ShieldCheck, Lock, Users, Building2, Globe, Mail, Phone, Hash,
-  Percent, Link2, Clock, Bell, AtSign
+  ShieldCheck, Lock, Users, Globe, Mail, Phone, Link2, Clock, AtSign, Building2
 } from 'lucide-react';
 import api from '../../api';
 import { useAlert } from '../../context/AlertContext';
 import { useRole, fetchRolePermissions, clearPermissionsCache } from '../../utils/permissions';
+import { clearSiteSettingsCache } from '../../hooks/useSiteSettings';
 
 // ── Tab definitions ─────────────────────────────────────────────────────────
 const TABS = [
@@ -22,15 +22,10 @@ const TABS = [
 ];
 
 const EMPTY_FORM = {
-  // ── Company / General ────────────────────────────────────────────────────
-  company_name: '',
-  company_tagline: '',
+  // ── Contact / General ────────────────────────────────────────────────────
   company_email: '',
   company_phone: '',
   company_secondary_phone: '',
-  company_registration: '',
-  vat_rate: '0',
-  notification_email: '',
   business_hours: '',
   store_address: '',
   pickup_address: '',
@@ -53,7 +48,7 @@ const EMPTY_FORM = {
 };
 
 // Keys that belong to each tab's save action
-const GENERAL_KEYS  = ['company_name','company_tagline','company_email','company_phone','company_secondary_phone','company_registration','vat_rate','notification_email','business_hours','store_address','pickup_address','social_instagram','social_facebook','social_twitter','social_linkedin','under_construction'];
+const GENERAL_KEYS  = ['company_email','company_phone','company_secondary_phone','business_hours','store_address','pickup_address','social_instagram','social_facebook','social_twitter','social_linkedin','under_construction'];
 const PAYMENT_KEYS  = ['paystack_enabled','bank_name','bank_branch','bank_account_number','bank_account_name','momo_number','momo_network','manual_payment_instructions'];
 
 const AdminSettings = () => {
@@ -120,12 +115,13 @@ const AdminSettings = () => {
   }, [activeTab, isAdmin]);
 
   // ── Save handlers ────────────────────────────────────────────────────────
-  const saveKeys = async (keys, setSaving, label) => {
+  const saveKeys = async (keys, setSaving, label, isPublic = false) => {
     setSaving(true);
     try {
       const payload = {};
       keys.forEach(k => { payload[k] = form[k] ?? ''; });
       await api.put('/admin/settings', payload);
+      if (isPublic) clearSiteSettingsCache(); // bust frontend cache so main site picks up changes
       showAlert('success', 'Saved', `${label} updated successfully.`);
     } catch (err) {
       showAlert('error', 'Save Failed', err.response?.data?.error || 'Could not save settings');
@@ -134,8 +130,8 @@ const AdminSettings = () => {
     }
   };
 
-  const handleSaveGeneral  = (e) => { e.preventDefault(); saveKeys(GENERAL_KEYS,  setSavingGeneral,  'General settings'); };
-  const handleSavePayments = (e) => { e.preventDefault(); saveKeys(PAYMENT_KEYS,  setSavingPayments, 'Payment settings'); };
+  const handleSaveGeneral  = (e) => { e.preventDefault(); saveKeys(GENERAL_KEYS,  setSavingGeneral,  'General settings', true); };
+  const handleSavePayments = (e) => { e.preventDefault(); saveKeys(PAYMENT_KEYS,  setSavingPayments, 'Payment settings', false); };
 
   const toggleUnderConstruction = () => {
     const newVal = form.under_construction === 'true' ? 'false' : 'true';
@@ -278,46 +274,37 @@ const AdminSettings = () => {
         {activeTab === 'general' && (
           <form onSubmit={handleSaveGeneral} className="space-y-6">
 
-            {/* Company Information */}
-            <Section icon={<Building2 size={20} className="text-green-500" />} title="Company Information">
-              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-5">Core business details used on documents, proformas, and receipts.</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FieldInput icon={<Building2 size={14} />} label="Company Name" value={f('company_name')} onChange={set('company_name')} placeholder="e.g. Expert Office Furnish Ltd." />
-                <FieldInput icon={<Hash size={14} />} label="Business Tagline" value={f('company_tagline')} onChange={set('company_tagline')} placeholder="e.g. Your Health, Your Wealth" />
-                <FieldInput icon={<Hash size={14} />} label="Registration / TIN Number" value={f('company_registration')} onChange={set('company_registration')} placeholder="e.g. CS123456789" />
-                <FieldInput icon={<Percent size={14} />} label="VAT Rate (%)" value={f('vat_rate')} onChange={set('vat_rate')} placeholder="e.g. 15" type="number" />
-              </div>
-            </Section>
-
             {/* Contact Details */}
             <Section icon={<Phone size={20} className="text-blue-500" />} title="Contact Details">
-              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-5">Displayed on documents and contact pages.</p>
+              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-5">
+                Displayed on the website footer and contact section. Changes go live immediately after saving.
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FieldInput icon={<Mail size={14} />} label="Primary Email" value={f('company_email')} onChange={set('company_email')} placeholder="e.g. info@expertoffice.com" />
-                <FieldInput icon={<Bell size={14} />} label="Notification / Orders Email" value={f('notification_email')} onChange={set('notification_email')} placeholder="e.g. orders@expertoffice.com" />
-                <FieldInput icon={<Phone size={14} />} label="Primary Phone" value={f('company_phone')} onChange={set('company_phone')} placeholder="e.g. +233 30 000 0000" />
-                <FieldInput icon={<Phone size={14} />} label="Secondary Phone" value={f('company_secondary_phone')} onChange={set('company_secondary_phone')} placeholder="e.g. +233 55 000 0000" />
-                <div className="md:col-span-2">
-                  <FieldInput icon={<Clock size={14} />} label="Business Hours" value={f('business_hours')} onChange={set('business_hours')} placeholder="e.g. Mon–Fri: 8am–6pm | Sat: 9am–3pm" />
-                </div>
+                <FieldInput icon={<Mail size={14} />} label="Email Address" value={f('company_email')} onChange={set('company_email')} placeholder="e.g. sales@expertoffice.com" />
+                <FieldInput icon={<Phone size={14} />} label="Primary Phone" value={f('company_phone')} onChange={set('company_phone')} placeholder="e.g. +233 244 371593" />
+                <FieldInput icon={<Phone size={14} />} label="Secondary Phone" value={f('company_secondary_phone')} onChange={set('company_secondary_phone')} placeholder="e.g. +233 244 280532" />
+                <FieldInput icon={<Clock size={14} />} label="Business Hours" value={f('business_hours')} onChange={set('business_hours')} placeholder="e.g. Mon–Fri: 8am–6pm | Sat: 9am–3pm" />
               </div>
             </Section>
 
             {/* Location */}
             <Section icon={<MapPin size={20} className="text-yellow-500" />} title="Location">
-              <div className="space-y-4">
-                <FieldInput icon={<MapPin size={14} />} label="Pickup / Showroom Address" value={f('pickup_address') || f('store_address')} onChange={(v) => setForm(p => ({ ...p, pickup_address: v, store_address: v }))} placeholder="e.g. 12 Liberation Road, Accra, Ghana" />
-              </div>
+              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-5">
+                Shown on the website contact section and used for pickup orders.
+              </p>
+              <FieldInput icon={<MapPin size={14} />} label="Pickup / Showroom Address" value={f('pickup_address') || f('store_address')} onChange={(v) => setForm(p => ({ ...p, pickup_address: v, store_address: v }))} placeholder="e.g. Atomic Hills Estate Road, Near ASI Plaza, Accra" />
             </Section>
 
             {/* Social Media */}
             <Section icon={<Globe size={20} className="text-purple-500" />} title="Social Media">
-              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-5">Links displayed on the website footer and contact section.</p>
+              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-5">
+                Links shown in the website footer. Leave blank to hide a platform.
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FieldInput icon={<AtSign size={14} />} label="Instagram" value={f('social_instagram')} onChange={set('social_instagram')} placeholder="https://instagram.com/expertoffice" />
-                <FieldInput icon={<Link2 size={14} />} label="Facebook" value={f('social_facebook')} onChange={set('social_facebook')} placeholder="https://facebook.com/expertoffice" />
-                <FieldInput icon={<Link2 size={14} />} label="X / Twitter" value={f('social_twitter')} onChange={set('social_twitter')} placeholder="https://x.com/expertoffice" />
-                <FieldInput icon={<Globe size={14} />} label="LinkedIn" value={f('social_linkedin')} onChange={set('social_linkedin')} placeholder="https://linkedin.com/company/expertoffice" />
+                <FieldInput icon={<AtSign size={14} />} label="Instagram URL" value={f('social_instagram')} onChange={set('social_instagram')} placeholder="https://instagram.com/expertoffice" />
+                <FieldInput icon={<Link2 size={14} />} label="Facebook URL" value={f('social_facebook')} onChange={set('social_facebook')} placeholder="https://facebook.com/expertoffice" />
+                <FieldInput icon={<Link2 size={14} />} label="X / Twitter URL" value={f('social_twitter')} onChange={set('social_twitter')} placeholder="https://x.com/expertoffice" />
+                <FieldInput icon={<Globe size={14} />} label="LinkedIn URL" value={f('social_linkedin')} onChange={set('social_linkedin')} placeholder="https://linkedin.com/company/expertoffice" />
               </div>
             </Section>
 

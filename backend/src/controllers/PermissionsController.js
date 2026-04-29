@@ -92,12 +92,13 @@ const updatePermissions = async (req, res) => {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
+    const enabledVal = (v) => (v ? 1 : 0);
     for (const [key, enabled] of Object.entries(permissions)) {
       await db.query(
         `INSERT INTO role_permissions (role, permission_key, enabled)
          VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE enabled = VALUES(enabled)`,
-        [role, key, enabled ? 1 : 0]
+         ON DUPLICATE KEY UPDATE enabled = ?`,
+        [role, key, enabledVal(enabled), enabledVal(enabled)]
       );
     }
 

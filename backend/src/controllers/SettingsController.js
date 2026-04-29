@@ -4,7 +4,11 @@ const PUBLIC_KEYS = [
   'paystack_enabled', 'store_address', 'pickup_address',
   'bank_name', 'bank_branch', 'bank_account_number', 'bank_account_name',
   'momo_number', 'momo_network',
-  'manual_payment_instructions', 'under_construction'
+  'manual_payment_instructions', 'under_construction',
+  // Contact & social — used by the main website
+  'company_email', 'company_phone', 'company_secondary_phone',
+  'business_hours',
+  'social_instagram', 'social_facebook', 'social_twitter', 'social_linkedin',
 ];
 
 const SettingsController = {
