@@ -375,6 +375,8 @@ const OrderController = {
             status,
             payment_status
           });
+          // Notify all admin connections so their order lists auto-refresh
+          io.emit('admin_orders_updated', { orderId: id, orderNumber: orderRows[0].order_number });
         }
       }
 
@@ -404,6 +406,7 @@ const OrderController = {
             orderNumber: orderRows[0].order_number,
             payment_status: 'verified'
           });
+          io.emit('admin_orders_updated', { orderId: id, orderNumber: orderRows[0].order_number });
         }
       }
 

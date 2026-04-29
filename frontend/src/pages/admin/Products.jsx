@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Pagination from '../../components/admin/Pagination';
 import api from '../../api';
+import { subscribeToEvent } from '../../utils/socket';
 
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || '';
 import AdminLayout from '../../components/admin/AdminLayout';
@@ -82,6 +83,11 @@ const Products = () => {
     const t = setTimeout(() => { setPage(1); fetchProducts(1, searchTerm); }, 350);
     return () => clearTimeout(t);
   }, [searchTerm]);
+
+  // Auto-refresh when products are mutated by any admin user
+  useEffect(() => {
+    return subscribeToEvent('admin_products_updated', () => fetchProducts(page, searchTerm));
+  }, [page, searchTerm]);
 
   const fetchCategories = async () => {
     try {

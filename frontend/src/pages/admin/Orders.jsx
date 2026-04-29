@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Pagination from '../../components/admin/Pagination';
 import api from '../../api';
 import AdminLayout from '../../components/admin/AdminLayout';
+import { subscribeToEvent } from '../../utils/socket';
 import {
   Search, Filter, Calendar,
   Package, Truck, Store, CreditCard, Banknote, Smartphone,
@@ -108,6 +109,15 @@ const Orders = () => {
     const t = setTimeout(() => { setPage(1); fetchOrders(1, filterStatus, filterPayment, searchQuery); }, 350);
     return () => clearTimeout(t);
   }, [searchQuery, filterStatus, filterPayment]);
+
+  // Auto-refresh when any admin action mutates orders
+  useEffect(() => {
+    const unsub1 = subscribeToEvent('admin_orders_updated', () => fetchOrders(page, filterStatus, filterPayment, searchQuery));
+    const unsub2 = subscribeToEvent('admin_new_order', () => fetchOrders(1, filterStatus, filterPayment, searchQuery));
+    const unsub3 = subscribeToEvent('admin_receipt_uploaded', () => fetchOrders(page, filterStatus, filterPayment, searchQuery));
+    const unsub4 = subscribeToEvent('admin_order_cancelled', () => fetchOrders(page, filterStatus, filterPayment, searchQuery));
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); };
+  }, [page, filterStatus, filterPayment, searchQuery]);
 
   const openOrder = async (order) => {
     setSelectedOrder(order);

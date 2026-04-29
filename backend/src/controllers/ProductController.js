@@ -5,6 +5,7 @@ const path = require('path');
 const XLSX = require('xlsx');
 const { getAssetPath } = require('../utils/imageHandler');
 const { optimizeImage } = require('../utils/imageOptimizer');
+const { getIo } = require('../utils/socket');
 
 /**
  * @desc    Get all products
@@ -153,6 +154,8 @@ const createProduct = async (req, res) => {
             [req.user.id, 'CREATE_PRODUCT', `Created product ID: ${productId}, Name: ${name}`]
         );
 
+        const io = getIo();
+        if (io) io.emit('admin_products_updated', { action: 'created', productId });
         res.status(201).json({ message: 'Product created successfully', productId });
     } catch (error) {
         console.error('CREATE_PRODUCT_ERROR:', error);
@@ -259,6 +262,8 @@ const updateProduct = async (req, res) => {
             [req.user.id, 'UPDATE_PRODUCT', `Updated product ID: ${id}, Name: ${name}`]
         );
 
+        const io = getIo();
+        if (io) io.emit('admin_products_updated', { action: 'updated', productId: id });
         res.json({ message: 'Product updated successfully' });
     } catch (error) {
         console.error('UPDATE_PRODUCT_ERROR:', error);
@@ -291,6 +296,8 @@ const deleteProduct = async (req, res) => {
             [req.user.id, 'DELETE_PRODUCT', `Deleted product ID: ${req.params.id}`]
         );
 
+        const io = getIo();
+        if (io) io.emit('admin_products_updated', { action: 'deleted', productId: req.params.id });
         res.json({ message: 'Product deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Server error', details: error.message });

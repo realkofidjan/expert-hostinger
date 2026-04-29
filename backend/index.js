@@ -51,6 +51,7 @@ const FinanceController = require('./src/controllers/FinanceController');
 const ProjectsController = require('./src/controllers/ProjectsController');
 const ProformaController = require('./src/controllers/ProformaController');
 const { exportBackup, restoreBackup } = require('./src/controllers/BackupController');
+const PermissionsController = require('./src/controllers/PermissionsController');
 
 // ── Multer: in-memory for images, disk for receipts ──────────────────────────
 const upload = multer({ storage: multer.memoryStorage() });
@@ -256,6 +257,10 @@ app.patch('/api/admin/notifications/:id/read', protect, authorize('admin', 'sub-
 app.get('/api/settings', SettingsController.getPublic);
 app.get('/api/admin/settings', protect, authorize('admin', 'sub-admin', 'staff'), SettingsController.getAll);
 app.put('/api/admin/settings', protect, authorize('admin'), SettingsController.update);
+
+// ── Permissions ───────────────────────────────────────────────────────────────
+app.get('/api/admin/permissions', protect, authorize('admin'), PermissionsController.getPermissions);
+app.put('/api/admin/permissions', protect, authorize('admin'), PermissionsController.updatePermissions);
 
 // ── Search ────────────────────────────────────────────────────────────────────
 app.get('/api/admin/search', protect, authorize('admin', 'sub-admin', 'staff'), SearchController.globalSearch);
@@ -503,6 +508,38 @@ const db = require('./src/config/db');
     }
   } catch (e) {
     console.warn('Migration (dimensions) error:', e.message);
+  }
+
+  // Standalone migration: role_permissions table
+  try {
+    const { DEFAULTS, ALL_PERMISSIONS } = require('./src/controllers/PermissionsController');
+    const [rpExists] = await db.query("SHOW TABLES LIKE 'role_permissions'");
+    if (rpExists.length === 0) {
+      await db.query(`
+        CREATE TABLE role_permissions (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          role VARCHAR(50) NOT NULL,
+          permission_key VARCHAR(100) NOT NULL,
+          enabled TINYINT(1) NOT NULL DEFAULT 0,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY uq_role_perm (role, permission_key)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      `);
+      console.log('Migration: created role_permissions table');
+      // Seed with defaults
+      for (const role of ['sub-admin', 'staff']) {
+        for (const perm of ALL_PERMISSIONS) {
+          const enabled = DEFAULTS[role]?.[perm.key] ? 1 : 0;
+          await db.query(
+            'INSERT IGNORE INTO role_permissions (role, permission_key, enabled) VALUES (?, ?, ?)',
+            [role, perm.key, enabled]
+          );
+        }
+      }
+      console.log('Migration: seeded role_permissions with defaults');
+    }
+  } catch (e) {
+    console.warn('Migration (role_permissions) error:', e.message);
   }
 })();
 

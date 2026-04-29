@@ -1,28 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import {
-  Settings, ToggleLeft, ToggleRight, MapPin, FileText, CreditCard,
+  Settings, ToggleLeft, ToggleRight, MapPin, CreditCard,
   Save, Smartphone, Banknote, Truck, Pencil, Check, X, AlertTriangle,
-  Trash2, Download, Upload, Construction, RotateCcw, CheckCircle2
+  Trash2, Download, Upload, Construction, RotateCcw, CheckCircle2,
+  ShieldCheck, Lock, Users
 } from 'lucide-react';
 import api from '../../api';
 import { useAlert } from '../../context/AlertContext';
-import { useRole } from '../../utils/permissions';
+import { useRole, fetchRolePermissions, clearPermissionsCache } from '../../utils/permissions';
+
+// ── Tab definitions ────────────────────────────────────────────────────────────
+const TABS = [
+  { id: 'general',     label: 'General',     icon: <Settings size={15} /> },
+  { id: 'payments',    label: 'Payments',    icon: <CreditCard size={15} /> },
+  { id: 'delivery',    label: 'Delivery',    icon: <Truck size={15} /> },
+  { id: 'permissions', label: 'Permissions', icon: <ShieldCheck size={15} />, adminOnly: true },
+  { id: 'backup',      label: 'Backup',      icon: <Download size={15} /> },
+];
 
 const AdminSettings = () => {
   const navigate = useNavigate();
-  const { can } = useRole();
+  const { can, isAdmin } = useRole();
   const { showAlert } = useAlert();
+  const [activeTab, setActiveTab] = useState('general');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [resetConfirm, setResetConfirm] = useState(false);
-  const [resetPhrase, setResetPhrase] = useState('');
-  const [resetting, setResetting] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [restoring, setRestoring] = useState(false);
-  const [restoreResults, setRestoreResults] = useState(null);
-  const restoreInputRef = useRef(null);
 
   useEffect(() => { if (!can('manageSettings')) navigate('/admin', { replace: true }); }, []);
 
@@ -44,6 +48,21 @@ const AdminSettings = () => {
   const [regionsLoading, setRegionsLoading] = useState(true);
   const [editingRegion, setEditingRegion] = useState(null);
 
+  // Permissions tab state
+  const [permDefinitions, setPermDefinitions] = useState([]);
+  const [permMatrix, setPermMatrix] = useState({ 'sub-admin': {}, staff: {} });
+  const [permLoading, setPermLoading] = useState(false);
+  const [savingRole, setSavingRole] = useState(null);
+
+  // Backup tab state
+  const [resetConfirm, setResetConfirm] = useState(false);
+  const [resetPhrase, setResetPhrase] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreResults, setRestoreResults] = useState(null);
+  const restoreInputRef = useRef(null);
+
   useEffect(() => {
     api.get('/admin/settings')
       .then(res => setForm(prev => ({ ...prev, ...res.data })))
@@ -56,6 +75,21 @@ const AdminSettings = () => {
       .finally(() => setRegionsLoading(false));
   }, []);
 
+  // Load permissions when Permissions tab opens (admin only)
+  useEffect(() => {
+    if (activeTab === 'permissions' && isAdmin && permDefinitions.length === 0) {
+      setPermLoading(true);
+      api.get('/admin/permissions')
+        .then(res => {
+          setPermDefinitions(res.data.definitions || []);
+          setPermMatrix(res.data.permissions || { 'sub-admin': {}, staff: {} });
+        })
+        .catch(() => showAlert('error', 'Load Failed', 'Could not load permissions'))
+        .finally(() => setPermLoading(false));
+    }
+  }, [activeTab, isAdmin]);
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -84,6 +118,26 @@ const AdminSettings = () => {
     }
   };
 
+  const handlePermToggle = (role, key) => {
+    setPermMatrix(prev => ({
+      ...prev,
+      [role]: { ...prev[role], [key]: !prev[role][key] }
+    }));
+  };
+
+  const handleSavePermissions = async (role) => {
+    setSavingRole(role);
+    try {
+      await api.put('/admin/permissions', { role, permissions: permMatrix[role] });
+      clearPermissionsCache();
+      showAlert('success', 'Permissions Saved', `Permissions for ${role} updated.`);
+    } catch (err) {
+      showAlert('error', 'Save Failed', err.response?.data?.error || 'Could not save permissions');
+    } finally {
+      setSavingRole(null);
+    }
+  };
+
   const handleExport = async () => {
     setExporting(true);
     try {
@@ -109,7 +163,6 @@ const AdminSettings = () => {
       showAlert('error', 'Invalid File', 'Please upload a .zip file.');
       return;
     }
-
     setRestoring(true);
     setRestoreResults(null);
     const formData = new FormData();
@@ -156,18 +209,75 @@ const AdminSettings = () => {
     );
   }
 
+  const visibleTabs = TABS.filter(t => !t.adminOnly || isAdmin);
+
   return (
     <AdminLayout>
       <div className="space-y-6 animate-fadeIn">
+        {/* Header */}
         <div>
           <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">Platform Settings</h1>
-          <p className="text-[var(--text-muted)] mt-1 font-medium">Configure payments, delivery, and store information</p>
+          <p className="text-[var(--text-muted)] mt-1 font-medium">Manage payments, delivery, permissions, and backups</p>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[3fr_2fr] gap-8 items-start">
+        {/* Tab Bar */}
+        <div className="flex gap-1 p-1.5 bg-[var(--bg-secondary)] rounded-2xl w-fit flex-wrap">
+          {visibleTabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                activeTab === tab.id
+                  ? 'bg-[var(--bg-primary)] text-[var(--text-primary)] shadow-md'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
 
-          {/* ── LEFT COLUMN ── */}
-          <form onSubmit={handleSave} className="space-y-8">
+        {/* ── GENERAL TAB ───────────────────────────────────────────────────── */}
+        {activeTab === 'general' && (
+          <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
+            <Section icon={<MapPin size={20} className="text-yellow-500" />} title="Pickup / Showroom Location">
+              <FieldInput
+                label="Address"
+                value={form.pickup_address || form.store_address}
+                onChange={v => setForm(p => ({ ...p, pickup_address: v, store_address: v }))}
+                placeholder="e.g. 12 Liberation Road, Accra, Ghana"
+              />
+            </Section>
+
+            <Section icon={<Construction size={20} className="text-amber-500" />} title="Site Visibility">
+              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-4">When enabled, visitors see an "Under Construction" page.</p>
+              <div
+                onClick={() => {
+                  const newVal = isUnderConstruction ? 'false' : 'true';
+                  setForm(p => ({ ...p, under_construction: newVal }));
+                  api.put('/admin/settings', { under_construction: newVal })
+                    .then(() => showAlert('success', isUnderConstruction ? 'Site Live' : 'Under Construction', isUnderConstruction ? 'Your website is now visible.' : 'Visitors see the construction page.'))
+                    .catch(() => showAlert('error', 'Failed', 'Could not update setting'));
+                }}
+                className={`flex items-center justify-between p-5 rounded-2xl border-2 cursor-pointer transition-all ${isUnderConstruction ? 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/60' : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-amber-500/20'}`}
+              >
+                <div>
+                  <p className="font-black text-[var(--text-primary)] text-sm">Under Construction Mode</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    {isUnderConstruction ? 'Site is hidden — visitors see construction page.' : 'Site is live and visible to all visitors.'}
+                  </p>
+                </div>
+                <div className={`transition-colors ${isUnderConstruction ? 'text-amber-500' : 'text-[var(--text-muted)]'}`}>
+                  {isUnderConstruction ? <ToggleRight size={40} strokeWidth={1.5} /> : <ToggleLeft size={40} strokeWidth={1.5} />}
+                </div>
+              </div>
+            </Section>
+          </div>
+        )}
+
+        {/* ── PAYMENTS TAB ──────────────────────────────────────────────────── */}
+        {activeTab === 'payments' && (
+          <form onSubmit={handleSave} className="space-y-6">
             {/* Paystack Toggle */}
             <Section icon={<CreditCard size={20} className="text-green-500" />} title="Payment Gateway">
               <div
@@ -186,20 +296,10 @@ const AdminSettings = () => {
               </div>
             </Section>
 
-            {/* Pickup Location */}
-            <Section icon={<MapPin size={20} className="text-yellow-500" />} title="Pickup Location">
-              <FieldInput
-                label="Pickup / Showroom Address"
-                value={form.pickup_address || form.store_address}
-                onChange={v => setForm(p => ({ ...p, pickup_address: v, store_address: v }))}
-                placeholder="e.g. 12 Liberation Road, Accra, Ghana"
-              />
-            </Section>
-
             {/* Bank Transfer */}
             <Section icon={<Banknote size={20} className="text-blue-500" />} title="Bank Transfer Details">
-              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-4">These details are shown to customers who choose to pay by bank transfer.</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-4">Shown to customers paying by bank transfer.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FieldInput label="Bank Name" value={form.bank_name} onChange={v => setForm(p => ({ ...p, bank_name: v }))} placeholder="e.g. GCB Bank" />
                 <FieldInput label="Branch" value={form.bank_branch} onChange={v => setForm(p => ({ ...p, bank_branch: v }))} placeholder="e.g. Accra Main Branch" />
                 <FieldInput label="Account Name" value={form.bank_account_name} onChange={v => setForm(p => ({ ...p, bank_account_name: v }))} placeholder="e.g. Expert Office Furnish Ltd." />
@@ -209,7 +309,7 @@ const AdminSettings = () => {
 
             {/* MoMo */}
             <Section icon={<Smartphone size={20} className="text-green-500" />} title="Mobile Money Details">
-              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-4">Shown to customers who pay via MoMo.</p>
+              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-4">Shown to customers paying via MoMo.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest ml-2 block mb-1.5">Network</label>
@@ -227,48 +327,150 @@ const AdminSettings = () => {
               </div>
             </Section>
 
-            {/* Save */}
             <button
               type="submit"
               disabled={saving}
               className="w-full py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-3xl font-extrabold text-sm tracking-widest uppercase hover:scale-[1.01] hover:shadow-[0_25px_60px_-10px_rgba(34,197,94,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-2xl"
             >
-              {saving ? 'SAVING...' : <><Save size={17} /> SAVE SETTINGS</>}
+              {saving ? 'SAVING...' : <><Save size={17} /> SAVE PAYMENT SETTINGS</>}
             </button>
-
           </form>
+        )}
 
-          {/* ── RIGHT COLUMN ── */}
-          <div className="space-y-6">
-
-            {/* Under Construction */}
-            <Section icon={<Construction size={20} className="text-amber-500" />} title="Site Visibility">
-              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-4">When enabled, visitors see an "Under Construction" page instead of the website. Admin access is unaffected.</p>
-              <div
-                onClick={() => {
-                  const newVal = isUnderConstruction ? 'false' : 'true';
-                  setForm(p => ({ ...p, under_construction: newVal }));
-                  api.put('/admin/settings', { under_construction: newVal })
-                    .then(() => showAlert('success', isUnderConstruction ? 'Site Live' : 'Under Construction', isUnderConstruction ? 'Your website is now visible to visitors.' : 'Visitors will see the under construction page.'))
-                    .catch(() => showAlert('error', 'Failed', 'Could not update setting'));
-                }}
-                className={`flex items-center justify-between p-5 rounded-2xl border-2 cursor-pointer transition-all ${isUnderConstruction ? 'border-amber-500/40 bg-amber-500/5 hover:border-amber-500/60' : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-amber-500/20'}`}
-              >
-                <div>
-                  <p className="font-black text-[var(--text-primary)] text-sm">Under Construction Mode</p>
-                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                    {isUnderConstruction ? 'Site is hidden — visitors see construction page.' : 'Site is live and visible to all visitors.'}
-                  </p>
-                </div>
-                <div className={`transition-colors ${isUnderConstruction ? 'text-amber-500' : 'text-[var(--text-muted)]'}`}>
-                  {isUnderConstruction ? <ToggleRight size={40} strokeWidth={1.5} /> : <ToggleLeft size={40} strokeWidth={1.5} />}
-                </div>
+        {/* ── DELIVERY TAB ──────────────────────────────────────────────────── */}
+        {activeTab === 'delivery' && (
+          <Section icon={<Truck size={20} className="text-purple-500" />} title="Delivery Regions & Pricing">
+            <p className="text-sm text-[var(--text-muted)] -mt-2 mb-4">Set delivery fees for each Ghana region. Toggle free delivery where applicable.</p>
+            {regionsLoading ? (
+              <div className="flex items-center gap-2 text-[var(--text-muted)] py-4">
+                <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" /> Loading regions...
               </div>
-            </Section>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {regions.map(region => (
+                  <div key={region.id} className={`flex items-center gap-4 p-4 rounded-2xl border ${editingRegion?.id === region.id ? 'border-green-500/40 bg-green-500/5' : 'border-[var(--border-color)] bg-[var(--bg-secondary)]'}`}>
+                    <div className="flex-1">
+                      <span className="font-bold text-sm text-[var(--text-primary)]">{region.region_name}</span>
+                      {region.is_free ? <span className="ml-2 text-[10px] font-black text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">Free</span> : null}
+                    </div>
+                    {editingRegion?.id === region.id ? (
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-medium cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editingRegion.is_free}
+                            onChange={e => setEditingRegion(r => ({ ...r, is_free: e.target.checked, delivery_fee: e.target.checked ? 0 : r.delivery_fee }))}
+                            className="accent-green-500"
+                          />
+                          Free
+                        </label>
+                        {!editingRegion.is_free && (
+                          <div className="flex items-center gap-1 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-3 py-1.5">
+                            <span className="text-xs text-[var(--text-muted)] font-bold">₵</span>
+                            <input
+                              type="number" step="0.01" min="0"
+                              value={editingRegion.delivery_fee}
+                              onChange={e => setEditingRegion(r => ({ ...r, delivery_fee: e.target.value }))}
+                              className="w-20 text-sm font-bold text-[var(--text-primary)] bg-transparent outline-none"
+                            />
+                          </div>
+                        )}
+                        <button onClick={() => saveRegion(editingRegion)} className="p-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"><Check size={14} /></button>
+                        <button onClick={() => setEditingRegion(null)} className="p-2 bg-[var(--bg-tertiary)] text-[var(--text-muted)] rounded-xl hover:text-red-500 transition-colors"><X size={14} /></button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-[var(--text-primary)]">
+                          {region.is_free ? 'Free delivery' : region.delivery_fee > 0 ? `₵${parseFloat(region.delivery_fee).toLocaleString('en-GH', { minimumFractionDigits: 2 })}` : <span className="text-amber-500 text-xs">Not set</span>}
+                        </span>
+                        <button
+                          onClick={() => setEditingRegion({ id: region.id, region_name: region.region_name, delivery_fee: region.delivery_fee, is_free: region.is_free, is_active: region.is_active })}
+                          className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-lg text-[var(--text-muted)] hover:text-green-500 transition-colors"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        )}
 
-            {/* Export Backup */}
+        {/* ── PERMISSIONS TAB ───────────────────────────────────────────────── */}
+        {activeTab === 'permissions' && isAdmin && (
+          <div className="space-y-6">
+            <div className="p-5 rounded-2xl bg-blue-500/5 border border-blue-500/20 flex items-start gap-3">
+              <Lock size={18} className="text-blue-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-[var(--text-muted)]">
+                Control what <strong className="text-[var(--text-primary)]">Sub-Admins</strong> and <strong className="text-[var(--text-primary)]">Staff</strong> can access.
+                Admins always have full access. Changes take effect at next login.
+              </p>
+            </div>
+
+            {permLoading ? (
+              <div className="flex items-center gap-2 text-[var(--text-muted)] py-8">
+                <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" /> Loading permissions...
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {['sub-admin', 'staff'].map(role => (
+                  <Section
+                    key={role}
+                    icon={<Users size={18} className={role === 'sub-admin' ? 'text-purple-400' : 'text-blue-400'} />}
+                    title={role === 'sub-admin' ? 'Sub-Admin' : 'Staff'}
+                  >
+                    <div className="space-y-2 mb-6">
+                      {permDefinitions.map(perm => {
+                        const enabled = !!(permMatrix[role]?.[perm.key]);
+                        return (
+                          <div
+                            key={perm.key}
+                            onClick={() => handlePermToggle(role, perm.key)}
+                            className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all select-none ${
+                              enabled
+                                ? 'border-green-500/30 bg-green-500/5 hover:border-green-500/50'
+                                : 'border-[var(--border-color)] bg-[var(--bg-secondary)] hover:border-green-500/20'
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className={`font-bold text-sm ${enabled ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>
+                                {perm.label}
+                              </p>
+                              <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{perm.desc}</p>
+                            </div>
+                            <div className={`ml-3 flex-shrink-0 transition-colors ${enabled ? 'text-green-500' : 'text-[var(--text-muted)]'}`}>
+                              {enabled ? <ToggleRight size={32} strokeWidth={1.5} /> : <ToggleLeft size={32} strokeWidth={1.5} />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => handleSavePermissions(role)}
+                      disabled={savingRole === role}
+                      className="w-full py-3.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl font-extrabold text-xs tracking-widest uppercase hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {savingRole === role ? (
+                        <><div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> Saving...</>
+                      ) : (
+                        <><Save size={14} /> Save {role === 'sub-admin' ? 'Sub-Admin' : 'Staff'} Permissions</>
+                      )}
+                    </button>
+                  </Section>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── BACKUP TAB ────────────────────────────────────────────────────── */}
+        {activeTab === 'backup' && (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Export */}
             <Section icon={<Download size={20} className="text-blue-500" />} title="Export Backup">
-              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-5">Download all database tables as individual Excel files in a single zip archive.</p>
+              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-5">Download all database tables as individual Excel files in a zip archive.</p>
               <button
                 onClick={handleExport}
                 disabled={exporting}
@@ -280,20 +482,13 @@ const AdminSettings = () => {
                   <><Download size={16} /> Download Backup</>
                 )}
               </button>
-              <p className="text-xs text-[var(--text-muted)] mt-3 text-center">Each table is saved as a separate .xlsx file</p>
+              <p className="text-xs text-[var(--text-muted)] mt-3 text-center">Each table saved as a separate .xlsx file</p>
             </Section>
 
-            {/* Restore Backup */}
+            {/* Restore */}
             <Section icon={<Upload size={20} className="text-green-500" />} title="Restore from Backup">
-              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-5">Upload a backup zip file. Each .xlsx file must be named after its table (e.g. <code className="text-xs bg-[var(--bg-tertiary)] px-1 py-0.5 rounded">orders.xlsx</code>).</p>
-
-              <input
-                ref={restoreInputRef}
-                type="file"
-                accept=".zip"
-                onChange={handleRestoreFile}
-                className="hidden"
-              />
+              <p className="text-sm text-[var(--text-muted)] -mt-2 mb-5">Upload a backup zip. Each .xlsx must be named after its table (e.g. <code className="text-xs bg-[var(--bg-tertiary)] px-1 py-0.5 rounded">orders.xlsx</code>).</p>
+              <input ref={restoreInputRef} type="file" accept=".zip" onChange={handleRestoreFile} className="hidden" />
               <button
                 onClick={() => restoreInputRef.current?.click()}
                 disabled={restoring}
@@ -305,7 +500,6 @@ const AdminSettings = () => {
                   <><Upload size={16} /> Upload Backup Zip</>
                 )}
               </button>
-
               {restoreResults && (
                 <div className="mt-4 space-y-1.5 max-h-48 overflow-y-auto">
                   {restoreResults.map((r, i) => (
@@ -321,9 +515,9 @@ const AdminSettings = () => {
               )}
             </Section>
 
-            {/* Danger Zone / Reset Database */}
+            {/* Danger Zone */}
             {can('resetDatabase') && (
-              <div className="p-6 rounded-[2rem] border-2 border-red-500/30 bg-red-500/5">
+              <div className="xl:col-span-2 p-6 rounded-[2rem] border-2 border-red-500/30 bg-red-500/5">
                 <h2 className="text-sm font-black text-red-500 uppercase tracking-widest mb-2 flex items-center gap-3">
                   <AlertTriangle size={18} /> Danger Zone
                 </h2>
@@ -372,71 +566,13 @@ const AdminSettings = () => {
               </div>
             )}
           </div>
-        </div>
-
-        {/* ── Delivery Regions — full width, two columns ── */}
-        <Section icon={<Truck size={20} className="text-purple-500" />} title="Delivery Regions & Pricing">
-          <p className="text-sm text-[var(--text-muted)] -mt-2 mb-4">Set delivery fees for each Ghana region. Toggle free delivery where applicable.</p>
-          {regionsLoading ? (
-            <div className="flex items-center gap-2 text-[var(--text-muted)] py-4">
-              <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" /> Loading regions...
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {regions.map(region => (
-                <div key={region.id} className={`flex items-center gap-4 p-4 rounded-2xl border ${editingRegion?.id === region.id ? 'border-green-500/40 bg-green-500/5' : 'border-[var(--border-color)] bg-[var(--bg-secondary)]'}`}>
-                  <div className="flex-1">
-                    <span className="font-bold text-sm text-[var(--text-primary)]">{region.region_name}</span>
-                    {region.is_free ? <span className="ml-2 text-[10px] font-black text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">Free</span> : null}
-                  </div>
-                  {editingRegion?.id === region.id ? (
-                    <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-medium cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={editingRegion.is_free}
-                          onChange={e => setEditingRegion(r => ({ ...r, is_free: e.target.checked, delivery_fee: e.target.checked ? 0 : r.delivery_fee }))}
-                          className="accent-green-500"
-                        />
-                        Free
-                      </label>
-                      {!editingRegion.is_free && (
-                        <div className="flex items-center gap-1 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-3 py-1.5">
-                          <span className="text-xs text-[var(--text-muted)] font-bold">₵</span>
-                          <input
-                            type="number" step="0.01" min="0"
-                            value={editingRegion.delivery_fee}
-                            onChange={e => setEditingRegion(r => ({ ...r, delivery_fee: e.target.value }))}
-                            className="w-20 text-sm font-bold text-[var(--text-primary)] bg-transparent outline-none"
-                          />
-                        </div>
-                      )}
-                      <button onClick={() => saveRegion(editingRegion)} className="p-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"><Check size={14} /></button>
-                      <button onClick={() => setEditingRegion(null)} className="p-2 bg-[var(--bg-tertiary)] text-[var(--text-muted)] rounded-xl hover:text-red-500 transition-colors"><X size={14} /></button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {region.is_free ? 'Free delivery' : region.delivery_fee > 0 ? `₵${parseFloat(region.delivery_fee).toLocaleString('en-GH', { minimumFractionDigits: 2 })}` : <span className="text-amber-500 text-xs">Not set</span>}
-                      </span>
-                      <button
-                        onClick={() => setEditingRegion({ id: region.id, region_name: region.region_name, delivery_fee: region.delivery_fee, is_free: region.is_free, is_active: region.is_active })}
-                        className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-lg text-[var(--text-muted)] hover:text-green-500 transition-colors"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </Section>
+        )}
       </div>
     </AdminLayout>
   );
 };
 
+// ── Sub-components ─────────────────────────────────────────────────────────────
 const Section = ({ icon, title, children }) => (
   <div className="glass p-8 rounded-[2.5rem] border border-[var(--border-color)] shadow-xl">
     <h2 className="text-sm font-black text-[var(--text-primary)] uppercase tracking-widest mb-6 flex items-center gap-3">
