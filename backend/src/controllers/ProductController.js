@@ -12,22 +12,27 @@ const { getIo } = require('../utils/socket');
    the best sale for a given product row { id, price, category_id }.
 ──────────────────────────────────────────────────────────────────────────────*/
 const getActiveSales = async () => {
-    const [rows] = await db.query(
-        `SELECT id, name, type, value, scope, target_ids
-         FROM sales
-         WHERE is_active = 1 AND NOW() BETWEEN starts_at AND ends_at`
-    );
-    return rows.map(s => ({
-        ...s,
-        targetIds: (() => {
-            try {
-                const parsed = typeof s.target_ids === 'string'
-                    ? JSON.parse(s.target_ids)
-                    : (s.target_ids || []);
-                return parsed.map(Number);
-            } catch { return []; }
-        })()
-    }));
+    try {
+        const [rows] = await db.query(
+            `SELECT id, name, type, value, scope, target_ids
+             FROM sales
+             WHERE is_active = 1 AND NOW() BETWEEN starts_at AND ends_at`
+        );
+        return rows.map(s => ({
+            ...s,
+            targetIds: (() => {
+                try {
+                    const parsed = typeof s.target_ids === 'string'
+                        ? JSON.parse(s.target_ids)
+                        : (s.target_ids || []);
+                    return parsed.map(Number);
+                } catch { return []; }
+            })()
+        }));
+    } catch (e) {
+        // sales table may not exist yet on this environment
+        return [];
+    }
 };
 
 const applySaleToProduct = (product, activeSales) => {
