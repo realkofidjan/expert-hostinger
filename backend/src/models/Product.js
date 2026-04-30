@@ -113,16 +113,16 @@ const Product = {
                     FROM sales sal
                     WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
                       AND (sal.scope = 'all'
-                        OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
-                        OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+                        OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
+                        OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
                     ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
                     LIMIT 1) as sale_price,
                    (SELECT sal.name
                     FROM sales sal
                     WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
                       AND (sal.scope = 'all'
-                        OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
-                        OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+                        OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
+                        OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
                     ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
                     LIMIT 1) as active_sale_name
             FROM products p
@@ -173,8 +173,8 @@ const Product = {
                 SELECT 1 FROM sales sal
                 WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
                   AND (sal.scope = 'all'
-                    OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
-                    OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+                    OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
+                    OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
             )`;
         }
 
@@ -238,8 +238,8 @@ const Product = {
                 SELECT 1 FROM sales sal
                 WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
                   AND (sal.scope = 'all'
-                    OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
-                    OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+                    OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
+                    OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
             )`;
         }
 
@@ -263,16 +263,16 @@ const Product = {
                     FROM sales sal
                     WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
                       AND (sal.scope = 'all'
-                        OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
-                        OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+                        OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
+                        OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
                     ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
                     LIMIT 1) as sale_price,
                    (SELECT sal.name
                     FROM sales sal
                     WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
                       AND (sal.scope = 'all'
-                        OR (sal.scope = 'products' AND JSON_CONTAINS(sal.target_ids, CAST(p.id AS CHAR)))
-                        OR (sal.scope = 'categories' AND JSON_CONTAINS(sal.target_ids, CAST(p.category_id AS CHAR))))
+                        OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
+                        OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
                     ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
                     LIMIT 1) as active_sale_name
             FROM products p WHERE p.id = ?`, [id]);
