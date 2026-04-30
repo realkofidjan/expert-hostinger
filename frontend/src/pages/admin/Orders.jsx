@@ -87,6 +87,8 @@ const Orders = () => {
   const [productResults, setProductResults] = useState([]);
   const [searchingProducts, setSearchingProducts] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const printRef = useRef(null);
 
   const fetchOrders = useCallback(async (p = 1, status = 'all', payment = 'all', q = '') => {
@@ -267,6 +269,23 @@ const Orders = () => {
       toast.error(err.response?.data?.error || 'Failed to update order');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!selectedOrder) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/admin/orders/${selectedOrder.id}`);
+      toast.success(`Order ${selectedOrder.order_number} deleted`);
+      setSelectedOrder(null);
+      setDeleteConfirm(false);
+      fetchOrders(page, filterStatus, filterPayment, searchQuery);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to delete order');
+      setDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -467,6 +486,14 @@ const Orders = () => {
                     <button onClick={handleDownloadPdf} disabled={downloading} className="p-2 bg-green-500/10 text-green-500 rounded-xl hover:bg-green-500 hover:text-white transition-all disabled:opacity-50">
                         {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                     </button>
+                    <button
+                      onClick={() => setDeleteConfirm(true)}
+                      title={['bank_transfer','momo'].includes(selectedOrder.payment_method) ? 'Cannot delete paid orders' : 'Delete order'}
+                      disabled={['bank_transfer','momo'].includes(selectedOrder.payment_method)}
+                      className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
 
@@ -586,6 +613,41 @@ const Orders = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && selectedOrder && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[var(--bg-primary)] w-full max-w-md rounded-[2rem] border border-[var(--border-color)] shadow-2xl p-8 space-y-5 animate-scaleIn">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center shrink-0">
+                <Trash2 size={20} className="text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-black text-[var(--text-primary)]">Delete Order?</h3>
+                <p className="text-xs text-[var(--text-muted)]">{selectedOrder.order_number}</p>
+              </div>
+            </div>
+            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+              This will permanently delete the order and restore stock for all items. This action <strong className="text-[var(--text-primary)]">cannot be undone</strong>.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                className="flex-1 py-3 bg-[var(--bg-secondary)] text-[var(--text-muted)] rounded-2xl text-sm font-bold hover:bg-[var(--bg-tertiary)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteOrder}
+                disabled={deleting}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-sm font-black transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {deleting ? <><Loader2 size={14} className="animate-spin" /> Deleting...</> : 'Delete Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isEditing && editFormData && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

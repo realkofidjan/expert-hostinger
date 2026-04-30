@@ -842,6 +842,50 @@ const OrderController = {
     } finally {
       connection.release();
     }
+  },
+
+  deleteOrder: async (req, res) => {
+    const { id } = req.params;
+    const connection = await db.getConnection();
+    await connection.beginTransaction();
+    try {
+      const [[order]] = await connection.query('SELECT id, order_number, payment_method FROM orders WHERE id = ?', [id]);
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+
+      // Bank transfer and MoMo orders cannot be deleted — payment has already been initiated
+      if (order.payment_method === 'bank_transfer' || order.payment_method === 'momo') {
+        await connection.release();
+        return res.status(400).json({
+          error: `Orders paid via ${order.payment_method === 'momo' ? 'Mobile Money' : 'Bank Transfer'} cannot be deleted. A payment was already initiated. Contact the customer directly to arrange a refund if needed.`
+        });
+      }
+
+      // Restore stock for all items
+      const [items] = await connection.query('SELECT * FROM order_items WHERE order_id = ?', [id]);
+      for (const item of items) {
+        if (item.variant_id) {
+          await connection.query('UPDATE product_variants SET stock_quantity = stock_quantity + ? WHERE id = ?', [item.quantity, item.variant_id]);
+        }
+        await connection.query('UPDATE products SET stock = stock + ? WHERE id = ?', [item.quantity, item.product_id]);
+      }
+
+      await connection.query('DELETE FROM order_items WHERE order_id = ?', [id]);
+      await connection.query('DELETE FROM orders WHERE id = ?', [id]);
+      await connection.commit();
+
+      await db.query(
+        'INSERT INTO activity_logs (user_id, action, context) VALUES (?, ?, ?)',
+        [req.user.id, 'DELETE_ORDER', `Deleted order ${order.order_number}`]
+      );
+
+      res.json({ message: 'Order deleted and stock restored' });
+    } catch (err) {
+      await connection.rollback();
+      console.error('DELETE_ORDER_ERROR:', err);
+      res.status(500).json({ error: err.message });
+    } finally {
+      connection.release();
+    }
   }
 };
 
