@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, CheckCircle2, ArrowRight, Loader2, Sparkles } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { FaFacebookF, FaApple } from 'react-icons/fa';
+import { useGoogleLogin } from '@react-oauth/google';
 import api from '../../api';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -11,6 +12,7 @@ export default function LoginScreen({ initialMode = 'login' }) {
     const [isLogin, setIsLogin] = useState(initialMode === 'login');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [formData, setFormData] = useState({
         full_name: '',
         email: '',
@@ -19,6 +21,29 @@ export default function LoginScreen({ initialMode = 'login' }) {
         confirmPassword: ''
     });
     const navigate = useNavigate();
+
+    const handleGoogleSuccess = async (tokenResponse) => {
+        setGoogleLoading(true);
+        try {
+            // tokenResponse.access_token is the Google OAuth2 access token
+            const res = await api.post('/auth/google', { access_token: tokenResponse.access_token });
+            const { token, user } = res.data;
+            localStorage.setItem('token', token);
+            localStorage.setItem('user', JSON.stringify(user));
+            toast.success(`Welcome, ${user.full_name || user.email}!`);
+            setTimeout(() => navigate('/'), 900);
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Google sign-in failed. Please try again.');
+        } finally {
+            setGoogleLoading(false);
+        }
+    };
+
+    const googleLogin = useGoogleLogin({
+        onSuccess: handleGoogleSuccess,
+        onError: () => toast.error('Google sign-in was cancelled or failed.'),
+        flow: 'implicit',
+    });
 
     const handleInputChange = (e) => {
         setFormData({
@@ -146,15 +171,20 @@ export default function LoginScreen({ initialMode = 'login' }) {
                     </div>
 
                     {/* Social Login Buttons */}
-                    <div className="grid grid-cols-3 gap-3 mb-8">
-                        <button className="flex items-center justify-center p-3.5 border border-gray-100 rounded-2xl hover:bg-gray-50 hover:border-gray-200 transition-all group">
-                            <FcGoogle size={20} className="group-hover:scale-110 transition-transform" />
-                        </button>
-                        <button className="flex items-center justify-center p-3.5 border border-gray-100 rounded-2xl hover:bg-gray-50 hover:border-gray-200 transition-all group">
-                            <FaApple size={20} className="text-gray-400 group-hover:text-black transition-all group-hover:scale-110" />
-                        </button>
-                        <button className="flex items-center justify-center p-3.5 border border-gray-100 rounded-2xl hover:bg-gray-50 hover:border-gray-200 transition-all group">
-                            <FaFacebookF size={18} className="text-gray-300 group-hover:text-[#1877F2] transition-all group-hover:scale-110" />
+                    <div className="mb-8">
+                        <button
+                            type="button"
+                            onClick={() => googleLogin()}
+                            disabled={googleLoading}
+                            className="w-full flex items-center justify-center gap-3 p-3.5 border border-gray-200 rounded-2xl hover:bg-gray-50 hover:border-gray-300 transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {googleLoading
+                                ? <Loader2 size={20} className="animate-spin text-gray-400" />
+                                : <FcGoogle size={20} className="group-hover:scale-110 transition-transform" />
+                            }
+                            <span className="text-[11px] font-black uppercase tracking-widest text-gray-500 group-hover:text-gray-700 transition-colors">
+                                {googleLoading ? 'Connecting...' : `Continue with Google`}
+                            </span>
                         </button>
                     </div>
 

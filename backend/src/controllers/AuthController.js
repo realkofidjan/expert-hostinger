@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { createNotification } = require('./NotificationController');
@@ -140,8 +141,81 @@ const getMe = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Google OAuth sign-in / sign-up
+ * @route   POST /api/auth/google
+ */
+const googleAuth = async (req, res) => {
+    const { access_token } = req.body;
+    if (!access_token) return res.status(400).json({ error: 'Google access token is required' });
+
+    try {
+        // Verify access token by calling Google's userinfo endpoint
+        const { data: gUser } = await axios.get(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+            { headers: { Authorization: `Bearer ${access_token}` } }
+        );
+        const { sub: googleId, email, name, picture } = gUser;
+
+        if (!email) return res.status(400).json({ error: 'Could not retrieve email from Google account' });
+
+        const db = require('../config/db');
+
+        // Look up user by email
+        let user = await User.findByEmail(email);
+
+        if (user) {
+            // User exists — update google_id + avatar if not set
+            if (!user.google_id) {
+                await db.query('UPDATE users SET google_id = ?, avatar = ? WHERE id = ?', [googleId, picture || null, user.id]);
+            }
+            if (user.status === 'suspended') {
+                return res.status(403).json({ error: 'Your account has been suspended.' });
+            }
+        } else {
+            // New user — create account (no password required for Google accounts)
+            const [result] = await db.query(
+                'INSERT INTO users (full_name, email, google_id, avatar, role, password) VALUES (?, ?, ?, ?, ?, ?)',
+                [name || email.split('@')[0], email, googleId, picture || null, 'customer', null]
+            );
+            user = await User.findById(result.insertId);
+
+            // Notify admins
+            try {
+                const { createNotification } = require('./NotificationController');
+                const { getIo } = require('../utils/socket');
+                await createNotification('new_user', 'New Customer (Google)', `${name || email} signed up via Google`, null, null);
+                const io = getIo();
+                if (io) io.emit('admin:notification', { type: 'new_user', title: `New Google customer: ${name || email}` });
+            } catch { /* non-critical */ }
+        }
+
+        const token = jwt.sign(
+            { id: user.id, email: user.email, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
+        );
+
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                full_name: user.full_name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                avatar: user.avatar || picture || null,
+            }
+        });
+    } catch (err) {
+        logToFile(`GOOGLE_AUTH_ERROR: ${err.message}`);
+        res.status(401).json({ error: 'Google authentication failed. Please try again.' });
+    }
+};
+
 module.exports = {
     register,
     login,
-    getMe
+    getMe,
+    googleAuth
 };

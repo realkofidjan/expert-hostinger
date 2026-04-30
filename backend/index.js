@@ -149,6 +149,7 @@ app.use('/assets', express.static(assetsDir, {
 // ── Auth & User ───────────────────────────────────────────────────────────────
 app.post('/api/auth/register', AuthController.register);
 app.post('/api/auth/login', AuthController.login);
+app.post('/api/auth/google', AuthController.googleAuth);
 app.get('/api/auth/me', protect, AuthController.getMe);
 app.put('/api/auth/profile', protect, signatureUpload.single('signature'), UserController.updateProfile);
 app.get('/api/auth/users', protect, authorize('admin'), UserController.getAllUsers);
@@ -460,6 +461,18 @@ const db = require('./src/config/db');
       await db.query('ALTER TABLE users ADD COLUMN signature VARCHAR(255) NULL');
       console.log('Migration: added signature column to users');
     }
+    if (!existingUserCols.includes('google_id')) {
+      await db.query('ALTER TABLE users ADD COLUMN google_id VARCHAR(255) NULL');
+      console.log('Migration: added google_id column to users');
+    }
+    if (!existingUserCols.includes('avatar')) {
+      await db.query('ALTER TABLE users ADD COLUMN avatar VARCHAR(512) NULL');
+      console.log('Migration: added avatar column to users');
+    }
+    // Allow null passwords for OAuth users
+    try {
+      await db.query("ALTER TABLE users MODIFY COLUMN password VARCHAR(255) NULL");
+    } catch { /* already nullable */ }
 
     const [subcatsExist] = await db.query("SHOW TABLES LIKE 'subcategories'");
     if (subcatsExist.length === 0) {
