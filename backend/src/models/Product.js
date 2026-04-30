@@ -107,24 +107,7 @@ const Product = {
     getAll: async ({ limit, offset, categoryId, search, status = 'active', ...reqFilters } = {}) => {
         let sql = `
             SELECT p.*, c.name as category_name, s.name as subcategory_name,
-                   (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as primary_image,
-                   (SELECT CASE WHEN sal.type = 'percentage' THEN ROUND(GREATEST(0, p.price * (1 - sal.value/100)), 2)
-                                ELSE ROUND(GREATEST(0, p.price - sal.value), 2) END
-                    FROM sales sal
-                    WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
-                      AND (sal.scope = 'all'
-                        OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
-                        OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
-                    ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
-                    LIMIT 1) as sale_price,
-                   (SELECT sal.name
-                    FROM sales sal
-                    WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
-                      AND (sal.scope = 'all'
-                        OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
-                        OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
-                    ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
-                    LIMIT 1) as active_sale_name
+                   (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as primary_image
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN subcategories s ON p.subcategory_id = s.id
@@ -168,14 +151,9 @@ const Product = {
             params.push(reqFilters.color, reqFilters.color);
         }
 
-        if (reqFilters?.onSale === 'true') {
-            sql += ` AND EXISTS (
-                SELECT 1 FROM sales sal
-                WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
-                  AND (sal.scope = 'all'
-                    OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
-                    OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
-            )`;
+        if (reqFilters?.saleProductIds?.length) {
+            sql += ` AND p.id IN (${reqFilters.saleProductIds.map(() => '?').join(',')})`;
+            params.push(...reqFilters.saleProductIds);
         }
 
         if (reqFilters?.isFeatured === 'true') {
@@ -233,14 +211,9 @@ const Product = {
             params.push(reqFilters.color, reqFilters.color);
         }
 
-        if (reqFilters?.onSale === 'true') {
-            sql += ` AND EXISTS (
-                SELECT 1 FROM sales sal
-                WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
-                  AND (sal.scope = 'all'
-                    OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
-                    OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
-            )`;
+        if (reqFilters?.saleProductIds?.length) {
+            sql += ` AND p.id IN (${reqFilters.saleProductIds.map(() => '?').join(',')})`;
+            params.push(...reqFilters.saleProductIds);
         }
 
         if (reqFilters?.isFeatured === 'true') {
@@ -256,26 +229,7 @@ const Product = {
      * @param   {number|string} id
      */
     getById: async (id) => {
-        const [rows] = await db.query(`
-            SELECT p.*,
-                   (SELECT CASE WHEN sal.type = 'percentage' THEN ROUND(GREATEST(0, p.price * (1 - sal.value/100)), 2)
-                                ELSE ROUND(GREATEST(0, p.price - sal.value), 2) END
-                    FROM sales sal
-                    WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
-                      AND (sal.scope = 'all'
-                        OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
-                        OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
-                    ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
-                    LIMIT 1) as sale_price,
-                   (SELECT sal.name
-                    FROM sales sal
-                    WHERE sal.is_active = 1 AND NOW() BETWEEN sal.starts_at AND sal.ends_at
-                      AND (sal.scope = 'all'
-                        OR (sal.scope = 'products' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.id)))
-                        OR (sal.scope = 'categories' AND JSON_OVERLAPS(sal.target_ids, JSON_ARRAY(p.category_id))))
-                    ORDER BY CASE sal.scope WHEN 'products' THEN 1 WHEN 'categories' THEN 2 ELSE 3 END, sal.value DESC
-                    LIMIT 1) as active_sale_name
-            FROM products p WHERE p.id = ?`, [id]);
+        const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [id]);
         if (rows.length === 0) return null;
 
         const product = rows[0];
