@@ -163,6 +163,8 @@ const Discounts = () => {
       return toast.error('Name, discount value and dates are required');
     if (new Date(saleForm.ends_at) <= new Date(saleForm.starts_at))
       return toast.error('End date must be after start date');
+    if ((saleForm.scope === 'products' || saleForm.scope === 'categories') && !(saleForm.target_ids?.length))
+      return toast.error(`Select at least one ${saleForm.scope === 'products' ? 'product' : 'category'}`);
     setSaleSaving(true);
     try {
       editingSale
@@ -191,8 +193,17 @@ const Discounts = () => {
   });
 
   const toggleSaleTarget = (id) => {
-    const ids = saleForm.target_ids || [];
-    setSaleForm({ ...saleForm, target_ids: ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id] });
+    setSaleForm(prev => {
+      const ids = prev.target_ids || [];
+      const numId = Number(id);
+      const numIds = ids.map(Number);
+      return {
+        ...prev,
+        target_ids: numIds.includes(numId)
+          ? numIds.filter(x => x !== numId)
+          : [...numIds, numId],
+      };
+    });
   };
 
   // ── derived (filtering is now server-side) ──────────────────────────────
@@ -606,13 +617,13 @@ const Discounts = () => {
                   <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto custom-scrollbar p-1">
                     {categories.map(c => (
                       <label key={c.id} className={`flex items-center gap-2 p-2.5 rounded-xl cursor-pointer border transition-all text-sm ${
-                        (saleForm.target_ids||[]).includes(c.id)
+                        (saleForm.target_ids||[]).map(Number).includes(Number(c.id))
                           ? 'border-green-500/50 bg-green-500/10'
                           : 'border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:bg-[var(--bg-secondary)]'
                       }`}>
-                        <input type="checkbox" className="hidden" checked={(saleForm.target_ids||[]).includes(c.id)} onChange={() => toggleSaleTarget(c.id)} />
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${(saleForm.target_ids||[]).includes(c.id) ? 'bg-green-500 border-green-500' : 'border-[var(--border-color)]'}`}>
-                          {(saleForm.target_ids||[]).includes(c.id) && <CheckCircle size={10} className="text-white" />}
+                        <input type="checkbox" className="hidden" checked={(saleForm.target_ids||[]).map(Number).includes(Number(c.id))} onChange={() => toggleSaleTarget(c.id)} />
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${(saleForm.target_ids||[]).map(Number).includes(Number(c.id)) ? 'bg-green-500 border-green-500' : 'border-[var(--border-color)]'}`}>
+                          {(saleForm.target_ids||[]).map(Number).includes(Number(c.id)) && <CheckCircle size={10} className="text-white" />}
                         </div>
                         <span className="font-medium text-[var(--text-primary)] truncate">{c.name}</span>
                       </label>
@@ -628,13 +639,13 @@ const Discounts = () => {
                   <div className="space-y-1.5 max-h-44 overflow-y-auto custom-scrollbar p-1">
                     {products.map(p => (
                       <label key={p.id} className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer border transition-all ${
-                        (saleForm.target_ids||[]).includes(p.id)
+                        (saleForm.target_ids||[]).map(Number).includes(Number(p.id))
                           ? 'border-green-500/50 bg-green-500/10'
                           : 'border-[var(--border-color)] bg-[var(--bg-tertiary)] hover:bg-[var(--bg-secondary)]'
                       }`}>
-                        <input type="checkbox" className="hidden" checked={(saleForm.target_ids||[]).includes(p.id)} onChange={() => toggleSaleTarget(p.id)} />
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${(saleForm.target_ids||[]).includes(p.id) ? 'bg-green-500 border-green-500' : 'border-[var(--border-color)]'}`}>
-                          {(saleForm.target_ids||[]).includes(p.id) && <CheckCircle size={10} className="text-white" />}
+                        <input type="checkbox" className="hidden" checked={(saleForm.target_ids||[]).map(Number).includes(Number(p.id))} onChange={() => toggleSaleTarget(p.id)} />
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${(saleForm.target_ids||[]).map(Number).includes(Number(p.id)) ? 'bg-green-500 border-green-500' : 'border-[var(--border-color)]'}`}>
+                          {(saleForm.target_ids||[]).map(Number).includes(Number(p.id)) && <CheckCircle size={10} className="text-white" />}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-[var(--text-primary)] truncate">{p.name}</p>
