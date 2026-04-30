@@ -488,7 +488,7 @@ const Orders = () => {
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(true)}
-                      title={['bank_transfer','momo'].includes(selectedOrder.payment_method) ? 'Cannot delete paid orders' : 'Delete order'}
+                      title={['bank_transfer','momo'].includes(selectedOrder.payment_method) ? 'Cannot delete — offer replacement item instead' : 'Delete order'}
                       disabled={['bank_transfer','momo'].includes(selectedOrder.payment_method)}
                       className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                     >

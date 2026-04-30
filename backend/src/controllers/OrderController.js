@@ -856,7 +856,7 @@ const OrderController = {
       if (order.payment_method === 'bank_transfer' || order.payment_method === 'momo') {
         await connection.release();
         return res.status(400).json({
-          error: `Orders paid via ${order.payment_method === 'momo' ? 'Mobile Money' : 'Bank Transfer'} cannot be deleted. A payment was already initiated. Contact the customer directly to arrange a refund if needed.`
+          error: `Orders paid via ${order.payment_method === 'momo' ? 'Mobile Money' : 'Bank Transfer'} cannot be deleted once payment is received. Offer the customer a replacement item of equal or greater value instead.`
         });
       }
 
