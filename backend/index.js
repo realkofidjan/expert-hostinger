@@ -150,6 +150,8 @@ app.use('/assets', express.static(assetsDir, {
 app.post('/api/auth/register', AuthController.register);
 app.post('/api/auth/login', AuthController.login);
 app.post('/api/auth/google', AuthController.googleAuth);
+app.get('/api/auth/verify-email', AuthController.verifyEmail);
+app.post('/api/auth/resend-verification', AuthController.resendVerification);
 app.get('/api/auth/me', protect, AuthController.getMe);
 app.put('/api/auth/profile', protect, signatureUpload.single('signature'), UserController.updateProfile);
 app.get('/api/auth/users', protect, authorize('admin'), UserController.getAllUsers);
@@ -468,6 +470,20 @@ const db = require('./src/config/db');
     if (!existingUserCols.includes('avatar')) {
       await db.query('ALTER TABLE users ADD COLUMN avatar VARCHAR(512) NULL');
       console.log('Migration: added avatar column to users');
+    }
+    if (!existingUserCols.includes('email_verified')) {
+      await db.query('ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0');
+      // Mark existing accounts as verified so they can still log in
+      await db.query("UPDATE users SET email_verified = 1 WHERE role IN ('admin','staff') OR google_id IS NOT NULL");
+      console.log('Migration: added email_verified column to users');
+    }
+    if (!existingUserCols.includes('verification_token')) {
+      await db.query('ALTER TABLE users ADD COLUMN verification_token VARCHAR(255) NULL');
+      console.log('Migration: added verification_token column to users');
+    }
+    if (!existingUserCols.includes('verification_token_expires')) {
+      await db.query('ALTER TABLE users ADD COLUMN verification_token_expires DATETIME NULL');
+      console.log('Migration: added verification_token_expires column to users');
     }
     // Allow null passwords for OAuth users
     try {

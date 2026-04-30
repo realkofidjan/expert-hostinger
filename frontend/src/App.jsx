@@ -36,6 +36,7 @@ import OrderSuccess from './pages/OrderSuccess';
 import UploadReceipt from './pages/UploadReceipt';
 import Services from './pages/Services';
 import UnderConstruction from './pages/UnderConstruction';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 import WhatsAppButton from './components/WhatsAppButton';
 
 // Fires PageLoader on every route change (skips the very first render — that's handled by the splash loader)
@@ -122,6 +123,7 @@ function App() {
                   <Route path="/profile" element={underConstruction ? <UnderConstruction /> : <Profile />} />
                   <Route path="/login" element={underConstruction ? <UnderConstruction /> : <Login />} />
                   <Route path="/register" element={underConstruction ? <UnderConstruction /> : <Register />} />
+                  <Route path="/verify-email" element={<VerifyEmailPage />} />
 
                   <Route path="/admin/login" element={<AdminLogin />} />
                   <Route

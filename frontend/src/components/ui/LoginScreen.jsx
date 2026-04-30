@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, CheckCircle2, ArrowRight, Loader2, Sparkles, X } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, CheckCircle2, ArrowRight, Loader2, Sparkles, X, Send } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 import { useGoogleLogin } from '@react-oauth/google';
 import api from '../../api';
@@ -84,6 +84,9 @@ export default function LoginScreen({ initialMode = 'login' }) {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [emailTouched, setEmailTouched] = useState(false);
+    // After successful signup, show the "check your email" screen
+    const [pendingEmail, setPendingEmail] = useState(null);
+    const [resending, setResending] = useState(false);
     const [formData, setFormData] = useState({
         full_name: '',
         email: '',
@@ -164,13 +167,31 @@ export default function LoginScreen({ initialMode = 'login' }) {
                     phone: formData.phone,
                     password: formData.password
                 });
-                toast.success('Account created! Please sign in.');
-                setIsLogin(true);
+                // Show "check your email" screen
+                setPendingEmail(formData.email);
             }
         } catch (err) {
+            // If login blocked due to unverified email, pivot to the pending screen
+            if (err.response?.data?.unverified) {
+                setPendingEmail(err.response.data.email || formData.email);
+                return;
+            }
             toast.error(err.response?.data?.error || err.message || 'Operation failed');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleResend = async () => {
+        if (!pendingEmail) return;
+        setResending(true);
+        try {
+            await api.post('/auth/resend-verification', { email: pendingEmail });
+            toast.success('Verification email resent! Check your inbox.');
+        } catch {
+            toast.error('Could not resend. Please try again in a moment.');
+        } finally {
+            setResending(false);
         }
     };
 
@@ -222,6 +243,43 @@ export default function LoginScreen({ initialMode = 'login' }) {
             {/* Right side - Form */}
             <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-8 md:p-12 lg:p-20 relative overflow-y-auto overflow-x-hidden">
                 <div className="w-full max-w-md animate-fadeIn">
+
+                {/* ── Check-your-email panel ── */}
+                {pendingEmail ? (
+                    <div className="text-center">
+                        <div className="flex justify-center mb-8">
+                            <img src="/assets/Company logo.png" alt="Logo" className="w-20 h-20 object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
+                        </div>
+                        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Send size={28} className="text-green-600" />
+                        </div>
+                        <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tight mb-3">Check your inbox</h2>
+                        <p className="text-gray-400 text-sm font-medium mb-2">
+                            We sent a verification link to
+                        </p>
+                        <p className="text-gray-900 font-black text-sm mb-6 break-all">{pendingEmail}</p>
+                        <p className="text-gray-400 text-xs leading-relaxed mb-8 max-w-xs mx-auto">
+                            Click the link in the email to verify your address and activate your account. The link expires in 24 hours.
+                        </p>
+                        <button
+                            onClick={handleResend}
+                            disabled={resending}
+                            className="w-full flex items-center justify-center gap-2 py-4 border border-gray-200 rounded-2xl text-[11px] font-black uppercase tracking-widest text-gray-500 hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50"
+                        >
+                            {resending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                            {resending ? 'Sending...' : 'Resend verification email'}
+                        </button>
+                        <div className="mt-6">
+                            <button
+                                onClick={() => { setPendingEmail(null); setIsLogin(true); }}
+                                className="text-[11px] font-black text-green-600 hover:text-green-700 uppercase tracking-widest underline underline-offset-4 decoration-2"
+                            >
+                                Back to sign in
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                <>
 
                     {/* Header */}
                     <div className="text-center mb-10">
@@ -447,6 +505,10 @@ export default function LoginScreen({ initialMode = 'login' }) {
                             </Link>
                         </div>
                     </form>
+                </div>
+                </>
+                )}
+
                 </div>
             </div>
         </div>
