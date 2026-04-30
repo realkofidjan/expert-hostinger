@@ -122,4 +122,46 @@ const remove = async (req, res) => {
     }
 };
 
-module.exports = { getAll, create, update, toggleActive, remove };
+/* ─── Public: validate a coupon code ─────────────────────────────────────── */
+const validate = async (req, res) => {
+    const { code, subtotal } = req.body;
+    if (!code) return res.status(400).json({ error: 'Coupon code is required' });
+    try {
+        const [[coupon]] = await db.query(
+            `SELECT * FROM discounts
+             WHERE code = ? AND is_active = 1
+             AND (expires_at IS NULL OR expires_at > NOW())
+             AND (max_uses IS NULL OR uses_count < max_uses)`,
+            [code.toUpperCase().trim()]
+        );
+        if (!coupon) {
+            return res.status(404).json({ error: 'Invalid or expired coupon code' });
+        }
+        const orderSubtotal = parseFloat(subtotal) || 0;
+        if (parseFloat(coupon.min_order_amount) > 0 && orderSubtotal < parseFloat(coupon.min_order_amount)) {
+            return res.status(400).json({
+                error: `Minimum order of ₵${parseFloat(coupon.min_order_amount).toLocaleString('en-GH', { minimumFractionDigits: 2 })} required for this coupon`
+            });
+        }
+        let discount_amount;
+        if (coupon.type === 'percentage') {
+            discount_amount = Math.round(orderSubtotal * (parseFloat(coupon.value) / 100) * 100) / 100;
+        } else {
+            discount_amount = Math.min(parseFloat(coupon.value), orderSubtotal);
+        }
+        res.json({
+            valid: true,
+            code: coupon.code,
+            type: coupon.type,
+            value: parseFloat(coupon.value),
+            discount_amount,
+            message: coupon.type === 'percentage'
+                ? `${coupon.value}% discount applied`
+                : `₵${discount_amount.toLocaleString('en-GH', { minimumFractionDigits: 2 })} discount applied`
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+module.exports = { getAll, create, update, toggleActive, remove, validate };

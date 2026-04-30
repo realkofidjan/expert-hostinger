@@ -79,7 +79,7 @@ const OrderController = {
     const customer_name = body.customer_name || body.name;
     const customer_email = body.customer_email || body.email;
     const customer_phone = body.customer_phone || body.phone || '';
-    const { items, payment_method, delivery_mode, region, delivery_fee, shipping_address } = body;
+    const { items, payment_method, delivery_mode, region, delivery_fee, shipping_address, coupon_code } = body;
 
     if (!customer_name) return res.status(400).json({ error: 'Missing required field: customer_name' });
     if (!customer_email) return res.status(400).json({ error: 'Missing required field: customer_email' });
@@ -98,7 +98,30 @@ const OrderController = {
     try {
       const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.unit_price) * parseInt(item.quantity)), 0);
       const fee = parseFloat(delivery_fee || 0);
-      const total = subtotal + fee;
+
+      // Validate & apply coupon if provided
+      let discountAmount = 0;
+      let resolvedCouponCode = null;
+      if (coupon_code) {
+        const [[coupon]] = await connection.query(
+          `SELECT * FROM discounts WHERE code = ? AND is_active = 1
+           AND (expires_at IS NULL OR expires_at > NOW())
+           AND (max_uses IS NULL OR uses_count < max_uses)`,
+          [coupon_code.toUpperCase().trim()]
+        );
+        if (coupon) {
+          if (coupon.type === 'percentage') {
+            discountAmount = Math.round(subtotal * (parseFloat(coupon.value) / 100) * 100) / 100;
+          } else {
+            discountAmount = Math.min(parseFloat(coupon.value), subtotal);
+          }
+          resolvedCouponCode = coupon.code;
+          // Increment usage count
+          await connection.query('UPDATE discounts SET uses_count = uses_count + 1 WHERE id = ?', [coupon.id]);
+        }
+      }
+
+      const total = Math.max(0, subtotal + fee - discountAmount);
       const orderNumber = generateOrderNumber();
 
       let bankReceiptPath = null;
@@ -114,8 +137,9 @@ const OrderController = {
           order_number, customer_name, customer_email, customer_phone,
           payment_method, delivery_mode, region, delivery_fee,
           subtotal, total_amount, bank_receipt_path,
-          status, payment_status, shipping_address, user_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+          status, payment_status, shipping_address, user_id,
+          coupon_code, discount_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)
       `, [
         orderNumber,
         customer_name,
@@ -130,7 +154,9 @@ const OrderController = {
         bankReceiptPath,
         initialPaymentStatus,
         shipping_address || (delivery_mode === 'delivery' && region ? region : null),
-        userId
+        userId,
+        resolvedCouponCode || null,
+        discountAmount
       ]);
 
       const orderId = orderResult.insertId;
