@@ -201,25 +201,6 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
           </div>
         )}
 
-        {/* Legend */}
-        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1.5 max-w-[360px] mx-auto xl:mx-0">
-          {Object.entries(SVG_ID_TO_NAME).map(([id, name]) => {
-            const dbR  = matchRegion(regions, name);
-            const fee  = dbR
-              ? (dbR.is_free ? 'Free' : dbR.delivery_fee > 0 ? fmt(dbR.delivery_fee) : '—')
-              : '—';
-            return (
-              <div key={id} className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
-                <span
-                  className="w-2.5 h-2.5 rounded-sm flex-shrink-0 border"
-                  style={{ background: REGION_COLOR[id] + '55', borderColor: REGION_COLOR[id] }}
-                />
-                <span className="truncate">{name}</span>
-                <span className="ml-auto font-bold" style={{ color: REGION_COLOR[id] }}>{fee}</span>
-              </div>
-            );
-          })}
-        </div>
         <p className="text-xs text-[var(--text-muted)] mt-3 text-center xl:text-left">
           Click a region to set its delivery fee
         </p>
@@ -306,46 +287,10 @@ const GhanaDeliveryMap = ({ regions, onSave }) => {
             </div>
           </div>
         ) : (
-          /* Region list */
-          <div className="glass rounded-[2rem] border border-[var(--border-color)] overflow-hidden">
-            <div className="px-6 py-4 border-b border-[var(--border-color)]">
-              <h3 className="font-black text-sm text-[var(--text-primary)] uppercase tracking-widest">
-                All Regions
-              </h3>
-            </div>
-            <div className="divide-y divide-[var(--border-color)] max-h-[420px] overflow-y-auto">
-              {Object.entries(SVG_ID_TO_NAME).map(([svgId, svgName]) => {
-                const region = matchRegion(regions, svgName);
-                const color  = REGION_COLOR[svgId];
-                return (
-                  <button
-                    key={svgId}
-                    onClick={() => { if (region) handleRegionClick(svgId); }}
-                    disabled={!region}
-                    className="w-full flex items-center gap-3 px-6 py-3.5 hover:bg-[var(--bg-secondary)] transition-colors text-left group disabled:opacity-40"
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ background: color }}
-                    />
-                    <span className="font-bold text-sm text-[var(--text-primary)] group-hover:text-[var(--text-primary)] transition-colors flex-1">
-                      {region?.region_name || svgName}
-                    </span>
-                    <span
-                      className="text-xs font-bold px-2.5 py-1 rounded-full flex-shrink-0"
-                      style={{
-                        background: color + '22',
-                        color,
-                      }}
-                    >
-                      {region
-                        ? (region.is_free ? 'Free' : region.delivery_fee > 0 ? fmt(region.delivery_fee) : 'Not set')
-                        : '—'}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex items-center justify-center h-48 rounded-[2rem] border border-dashed border-[var(--border-color)]">
+            <p className="text-sm text-[var(--text-muted)] text-center">
+              Click a region on the map<br />to set its delivery fee
+            </p>
           </div>
         )}
       </div>
