@@ -505,7 +505,6 @@ export default function LoginScreen({ initialMode = 'login' }) {
                             </Link>
                         </div>
                     </form>
-                </div>
                 </>
                 )}
 
