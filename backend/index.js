@@ -199,6 +199,8 @@ app.get('/api/orders/lookup', OrderController.lookupOrder);
 app.get('/api/orders/:orderNumber/details', OrderController.getOrderDetails);
 app.post('/api/orders/:orderNumber/cancel', OrderController.publicCancelOrder);
 app.post('/api/orders/:orderNumber/upload-receipt', receiptUpload.single('bank_receipt'), OrderController.uploadReceipt);
+app.put('/api/admin/orders/:id', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.updateOrder);
+app.delete('/api/admin/orders/:id', protect, authorize('admin'), OrderController.deleteOrder);
 app.patch('/api/admin/orders/:id/status', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.updateStatus);
 app.patch('/api/admin/orders/:id/verify-transfer', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.verifyBankTransfer);
 app.get('/api/admin/orders/:id/document', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.getDocument);

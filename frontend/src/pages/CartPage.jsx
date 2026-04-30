@@ -745,9 +745,15 @@ const PaymentOptions = ({ deliveryMode, selected, onSelect, paystackEnabled }) =
 
             {/* Paystack note */}
             {isSelected && id === 'momo' && (
-              <div className="mt-2 p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-200 dark:border-green-800 text-sm">
-                <p className="font-black text-green-700 dark:text-green-400 text-xs uppercase tracking-wider mb-1">Paystack Checkout</p>
-                <p className="text-gray-700 dark:text-gray-300">You will be securely redirected to Paystack to complete your purchase via Mobile Money or Card.</p>
+              <div className="mt-2 space-y-2">
+                <div className="p-4 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-200 dark:border-green-800 text-sm">
+                  <p className="font-black text-green-700 dark:text-green-400 text-xs uppercase tracking-wider mb-1">Paystack Checkout</p>
+                  <p className="text-gray-700 dark:text-gray-300">You will be securely redirected to Paystack to complete your purchase via Mobile Money or Card.</p>
+                </div>
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-200 dark:border-amber-800 flex items-start gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 dark:text-amber-400"><strong>Non-cancellable:</strong> MoMo orders cannot be cancelled once placed. Contact us if you need a refund.</p>
+                </div>
               </div>
             )}
 
@@ -782,6 +788,10 @@ const PaymentOptions = ({ deliveryMode, selected, onSelect, paystackEnabled }) =
                     <li>We verify and confirm your order</li>
                   </ol>
                   <p className="mt-2 text-[11px] text-amber-600 dark:text-amber-400">Your order will be automatically cancelled if no receipt is uploaded within 72 hours.</p>
+                </div>
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-200 dark:border-amber-800 flex items-start gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 dark:text-amber-400"><strong>Non-cancellable:</strong> Bank transfer orders cannot be cancelled once placed. Contact us if you need a refund.</p>
                 </div>
               </div>
             )}
