@@ -7,6 +7,49 @@ const { getAssetPath } = require('../utils/imageHandler');
 const { optimizeImage } = require('../utils/imageOptimizer');
 const { getIo } = require('../utils/socket');
 
+/* ─── Sale helpers (no JSON SQL functions — pure JS) ────────────────────────
+   Fetches all currently active sales and returns a function that resolves
+   the best sale for a given product row { id, price, category_id }.
+──────────────────────────────────────────────────────────────────────────────*/
+const getActiveSales = async () => {
+    const [rows] = await db.query(
+        `SELECT id, name, type, value, scope, target_ids
+         FROM sales
+         WHERE is_active = 1 AND NOW() BETWEEN starts_at AND ends_at`
+    );
+    return rows.map(s => ({
+        ...s,
+        targetIds: (() => {
+            try {
+                const parsed = typeof s.target_ids === 'string'
+                    ? JSON.parse(s.target_ids)
+                    : (s.target_ids || []);
+                return parsed.map(Number);
+            } catch { return []; }
+        })()
+    }));
+};
+
+const applySaleToProduct = (product, activeSales) => {
+    const pid = Number(product.id);
+    const cid = Number(product.category_id);
+    const price = parseFloat(product.price);
+
+    // Priority: product-specific > category > all
+    const match =
+        activeSales.find(s => s.scope === 'products' && s.targetIds.includes(pid)) ||
+        activeSales.find(s => s.scope === 'categories' && s.targetIds.includes(cid)) ||
+        activeSales.find(s => s.scope === 'all');
+
+    if (match) {
+        product.sale_price = match.type === 'percentage'
+            ? Math.round(Math.max(0, price * (1 - match.value / 100)) * 100) / 100
+            : Math.round(Math.max(0, price - match.value) * 100) / 100;
+        product.active_sale_name = match.name;
+    }
+    return product;
+};
+
 /**
  * @desc    Get all products
  * @route   GET /api/products
@@ -14,32 +57,59 @@ const { getIo } = require('../utils/socket');
 const getAllProducts = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 12; // Default 12 products per page
+        const limit = parseInt(req.query.limit) || 12;
         const offset = (page - 1) * limit;
         const categoryId = req.query.category;
         const search = req.query.q;
         const { minPrice, maxPrice, brand, color, onSale, isFeatured } = req.query;
 
-        const products = await Product.getAll({ 
+        // Resolve active sales in JS — no MySQL JSON functions needed
+        const activeSales = await getActiveSales();
+
+        // For onSale filter: compute which product IDs are on sale, then pass to query
+        let saleProductIds = undefined;
+        if (onSale === 'true') {
+            if (activeSales.length === 0) {
+                return res.json({ products: [], pagination: { total: 0, pages: 0, currentPage: page, limit } });
+            }
+            const hasAll = activeSales.some(s => s.scope === 'all');
+            if (!hasAll) {
+                // Fetch all product IDs and filter against active sales
+                const [allProds] = await db.query('SELECT id, category_id FROM products WHERE status = "active"');
+                saleProductIds = allProds
+                    .filter(p => {
+                        const pid = Number(p.id), cid = Number(p.category_id);
+                        return activeSales.some(s =>
+                            (s.scope === 'products' && s.targetIds.includes(pid)) ||
+                            (s.scope === 'categories' && s.targetIds.includes(cid))
+                        );
+                    })
+                    .map(p => p.id);
+                if (saleProductIds.length === 0) {
+                    return res.json({ products: [], pagination: { total: 0, pages: 0, currentPage: page, limit } });
+                }
+            }
+        }
+
+        const products = await Product.getAll({
             limit, offset, categoryId, search,
-            minPrice, maxPrice, brand, color, onSale, isFeatured
+            minPrice, maxPrice, brand, color, isFeatured, saleProductIds
         });
-        const total = await Product.getTotalCount({ 
+        const total = await Product.getTotalCount({
             categoryId, search,
-            minPrice, maxPrice, brand, color, onSale, isFeatured
+            minPrice, maxPrice, brand, color, isFeatured, saleProductIds
         });
 
-        // Fetch variants for all products in the list to enable swatches
+        // Attach variants + sale prices
         if (products.length > 0) {
             const productIds = products.map(p => p.id);
             const [variants] = await db.query(
                 'SELECT * FROM product_variants WHERE product_id IN (?)',
                 [productIds]
             );
-            
-            // Attach variants to products
             products.forEach(p => {
                 p.variants = variants.filter(v => v.product_id === p.id);
+                applySaleToProduct(p, activeSales);
             });
         }
 
@@ -64,8 +134,10 @@ const getAllProducts = async (req, res) => {
 const getProductById = async (req, res) => {
     try {
         const product = await Product.getById(req.params.id);
-        console.log('CONTROLLER_GET_VARIANTS:', product ? product.variants : 'No variants');
         if (!product) return res.status(404).json({ error: 'Product not found' });
+        // Apply active sale in JS
+        const activeSales = await getActiveSales();
+        applySaleToProduct(product, activeSales);
         res.json(product);
     } catch (error) {
         res.status(500).json({ error: 'Server error', details: error.message });
