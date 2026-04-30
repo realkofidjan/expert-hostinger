@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   ShoppingBag, Trash2, Plus, Minus, ArrowLeft, ArrowRight,
   CheckCircle, Loader2, ShoppingCart, MapPin, CreditCard,
-  Banknote, Smartphone, AlertCircle, Truck, Store, Clock
+  Banknote, Smartphone, AlertCircle, Truck, Store, Clock, Tag, X
 } from 'lucide-react';
 import MainNavbar from '../components/MainNavbar';
 import MainFooter from '../components/MainFooter';
@@ -30,6 +30,12 @@ const CartPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [paystackEnabled, setPaystackEnabled] = useState(true); // default true; corrected once settings load
+
+  // Coupon state
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, type, value, discount_amount, message }
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
 
   // Re-fetch the Paystack toggle every time the customer reaches the payment step
   // so the current admin setting is always reflected without a page refresh.
@@ -87,7 +93,29 @@ const CartPage = () => {
   }, [step]);
 
   const subtotal = cartItems.reduce((sum, i) => sum + (parseFloat(i.price || 0) * i.quantity), 0);
-  const total = subtotal + delivery.fee;
+  const couponDiscount = appliedCoupon ? parseFloat(appliedCoupon.discount_amount) : 0;
+  const total = Math.max(0, subtotal + delivery.fee - couponDiscount);
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setCouponError('');
+    setCouponLoading(true);
+    try {
+      const res = await api.post('/coupons/validate', { code: couponInput.trim(), subtotal });
+      setAppliedCoupon(res.data);
+      setCouponInput('');
+    } catch (err) {
+      setCouponError(err.response?.data?.error || 'Invalid coupon code');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError('');
+    setCouponInput('');
+  };
 
   const canProceedToDelivery = form.name.trim() && form.email.trim();
 
@@ -128,7 +156,8 @@ const CartPage = () => {
         region: delivery.region || '',
         delivery_fee: delivery.fee,
         shipping_address: shippingAddress,
-        items
+        items,
+        ...(appliedCoupon ? { coupon_code: appliedCoupon.code } : {})
       };
       console.log('PLACE_ORDER_PAYLOAD:', payload);
 
@@ -263,10 +292,62 @@ const CartPage = () => {
             <span>{[delivery.address, delivery.city, delivery.region].filter(Boolean).join(', ') || delivery.region}</span>
           </div>
         )}
+
+        {/* Coupon applied */}
+        {appliedCoupon && (
+          <div className="flex justify-between text-green-600 dark:text-green-400">
+            <span className="flex items-center gap-1 font-bold">
+              <Tag className="w-3 h-3" /> {appliedCoupon.code}
+            </span>
+            <span className="font-bold">-₵{couponDiscount.toLocaleString('en-GH', { minimumFractionDigits: 2 })}</span>
+          </div>
+        )}
+
         <div className="flex justify-between text-gray-900 dark:text-white font-black text-base pt-1 border-t border-gray-100 dark:border-gray-800">
           <span>Total</span>
           <span className="text-green-600">₵{total.toLocaleString('en-GH', { minimumFractionDigits: 2 })}</span>
         </div>
+      </div>
+
+      {/* Coupon input */}
+      <div className="pt-1">
+        {appliedCoupon ? (
+          <div className="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+            <div className="flex items-center gap-2">
+              <Tag className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+              <span className="text-xs font-black text-green-700 dark:text-green-400">{appliedCoupon.message}</span>
+            </div>
+            <button onClick={handleRemoveCoupon} className="text-gray-400 hover:text-red-500 transition-colors">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponInput}
+                onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
+                placeholder="Coupon code"
+                className="flex-1 px-3 py-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-colors font-bold uppercase"
+              />
+              <button
+                onClick={handleApplyCoupon}
+                disabled={couponLoading || !couponInput.trim()}
+                className="px-3 py-2 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-black rounded-xl hover:bg-green-600 dark:hover:bg-green-500 dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              >
+                {couponLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Tag className="w-3 h-3" />}
+                Apply
+              </button>
+            </div>
+            {couponError && (
+              <p className="text-[11px] text-red-500 dark:text-red-400 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3 shrink-0" /> {couponError}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

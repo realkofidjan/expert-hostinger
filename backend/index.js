@@ -266,6 +266,7 @@ app.put('/api/admin/permissions', protect, authorize('admin'), PermissionsContro
 app.get('/api/admin/search', protect, authorize('admin', 'sub-admin', 'staff'), SearchController.globalSearch);
 
 // ── Discounts ─────────────────────────────────────────────────────────────────
+app.post('/api/coupons/validate', DiscountController.validate); // public
 app.get('/api/admin/discounts', protect, authorize('admin', 'sub-admin', 'staff'), DiscountController.getAll);
 app.post('/api/admin/discounts', protect, authorize('admin'), DiscountController.create);
 app.put('/api/admin/discounts/:id', protect, authorize('admin'), DiscountController.update);
@@ -439,6 +440,14 @@ const db = require('./src/config/db');
     if (!existing.includes('delivery_notes')) {
       await db.query('ALTER TABLE orders ADD COLUMN delivery_notes TEXT NULL');
       console.log('Migration: added delivery_notes');
+    }
+    if (!existing.includes('coupon_code')) {
+      await db.query('ALTER TABLE orders ADD COLUMN coupon_code VARCHAR(50) NULL');
+      console.log('Migration: added coupon_code to orders');
+    }
+    if (!existing.includes('discount_amount')) {
+      await db.query('ALTER TABLE orders ADD COLUMN discount_amount DECIMAL(10,2) DEFAULT 0');
+      console.log('Migration: added discount_amount to orders');
     }
 
     const [userCols] = await db.query(
