@@ -150,7 +150,6 @@ const AdminSettings = () => {
         is_active: region.is_active !== false,
       });
       setRegions(prev => prev.map(r => r.id === region.id ? { ...r, ...region } : r));
-      setEditingRegion(null);
       showAlert('success', 'Region Updated', `${region.region_name} delivery fee updated.`);
     } catch {
       showAlert('error', 'Update Failed', 'Could not update delivery region');

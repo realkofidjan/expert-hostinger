@@ -44,14 +44,24 @@ const REGION_COLOR = {
   GHWN: '#34d399', // emerald-400
 };
 
-/* Match an SVG name → DB region row (fuzzy) */
+/* DB region names that don't exactly match the SVG display names */
+const DB_NAME_OVERRIDES = {
+  'brong-ahafo': 'Bono',
+};
+
+/* Match an SVG display name → DB region row (exact only, with known overrides) */
 const matchRegion = (regions, svgName) => {
   if (!svgName) return null;
   const n = svgName.toLowerCase().replace(/\s+/g, ' ').trim();
+  // 1. Exact match
+  const exact = regions.find(r =>
+    (r.region_name || '').toLowerCase().replace(/\s+/g, ' ').trim() === n
+  );
+  if (exact) return exact;
+  // 2. Known DB→SVG name overrides (e.g. "Brong-Ahafo" in DB = "Bono" on SVG)
   return regions.find(r => {
     const rn = (r.region_name || '').toLowerCase().replace(/\s+/g, ' ').trim();
-    return rn === n || rn.includes(n) || n.includes(rn) ||
-      (n === 'bono' && rn === 'brong-ahafo');
+    return DB_NAME_OVERRIDES[rn]?.toLowerCase() === n;
   });
 };
 
