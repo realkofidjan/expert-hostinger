@@ -59,7 +59,6 @@ const validateUpload = async (req, res) => {
             // Basic fields & type handling
             const name = (row.Name || row.name || '').toString().trim();
             const sku = (row.SKU || row.sku || '').toString().trim();
-            const price = parseFloat(row.Price || row.price);
             const brandInput = (row.Brand || row.brand || '').toString().trim();
             const catNameInput = (row.Category || row.category || '').toString().toLowerCase().trim();
             const subCatNameInput = (row.Subcategory || row.subcategory || '').toString().toLowerCase().trim();
@@ -72,8 +71,6 @@ const validateUpload = async (req, res) => {
                 if (seenInFile.has(sku)) errors.push('Duplicate SKU in file');
                 seenInFile.add(sku);
             }
-
-            if (isNaN(price)) errors.push('Invalid Price');
 
             // Category & Subcategory Resolution (Names Only)
             let resolvedCatId = null;
@@ -103,38 +100,33 @@ const validateUpload = async (req, res) => {
                 errors.push(`Brand '${brandInput}' not found`);
             }
 
-            // Variants parsing — supports both:
-            //   Color:Stock            (e.g. "Black:20")
-            //   Color:Dimensions:Stock (e.g. "Black:120x60cm:20")
+            // Variants parsing — supports:
+            //   Color              (e.g. "Black")
+            //   Color:Dimensions   (e.g. "Black:120x60cm")
             const variants = [];
             const rawVariants = row.Variants || row.variants || '';
             if (rawVariants) {
                 const pairs = rawVariants.split(',').map(p => p.trim());
                 for (const pair of pairs) {
                     const parts = pair.split(':').map(s => s?.trim());
-                    if (parts.length === 2) {
-                        const [vColor, vStock] = parts;
-                        if (!vColor || isNaN(parseInt(vStock))) {
+                    if (parts.length === 1) {
+                        const [vColor] = parts;
+                        if (!vColor) {
                             errors.push(`Invalid Variant: ${pair}`);
                         } else {
-                            variants.push({ color_name: vColor, dimensions: null, stock_quantity: parseInt(vStock) });
+                            variants.push({ color_name: vColor, dimensions: null });
                         }
-                    } else if (parts.length === 3) {
-                        const [vColor, vDimensions, vStock] = parts;
-                        if (!vColor || isNaN(parseInt(vStock))) {
+                    } else if (parts.length === 2) {
+                        const [vColor, vDimensions] = parts;
+                        if (!vColor) {
                             errors.push(`Invalid Variant: ${pair}`);
                         } else {
-                            variants.push({ color_name: vColor, dimensions: vDimensions || null, stock_quantity: parseInt(vStock) });
+                            variants.push({ color_name: vColor, dimensions: vDimensions || null });
                         }
                     } else {
-                        errors.push(`Invalid Variant format: ${pair} (expected Color:Stock or Color:Dimensions:Stock)`);
+                        errors.push(`Invalid Variant format: ${pair} (expected Color or Color:Dimensions)`);
                     }
                 }
-            }
-
-            const baseStock = parseInt(row.Stock || row.stock);
-            if (variants.length === 0 && (isNaN(baseStock) || baseStock < 0)) {
-                errors.push('Stock or Variants required');
             }
 
             const rawImages = row.Images || row.images || row['Image URLs'] || '';
@@ -142,7 +134,7 @@ const validateUpload = async (req, res) => {
 
             validatedRows.push({
                 ...row,
-                name, sku, price: isNaN(price) ? 0 : price,
+                name, sku,
                 brand: brandInput,
                 category_id: resolvedCatId,
                 subcategory_id: resolvedSubCatId,
@@ -185,8 +177,6 @@ const confirmUpload = async (req, res) => {
                 name: product.name,
                 sku: product.sku,
                 description: product.Description || product.description || '',
-                price: product.price,
-                stock: product.variants.length > 0 ? 0 : (parseInt(product.Stock || product.stock) || 0),
                 category_id: product.category_id,
                 subcategory_id: product.subcategory_id,
                 brand: product.brand,

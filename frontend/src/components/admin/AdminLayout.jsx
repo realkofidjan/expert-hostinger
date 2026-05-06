@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
-  ShoppingCart,
   Users as UsersIcon,
   Package,
   LogOut,
@@ -19,14 +18,10 @@ import {
   Sun,
   Moon,
   ExternalLink,
-  Tag,
-  ClipboardCheck,
   Settings,
   ShoppingBag,
-  Upload,
   CheckCheck,
   FolderOpen,
-  BarChart3
 } from 'lucide-react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -41,7 +36,6 @@ const TYPE_ROUTES = {
   product: '/admin/products',
   category: '/admin/categories',
   brand: '/admin/brands',
-  order: '/admin/orders',
   user: '/admin/users',
 };
 
@@ -49,7 +43,6 @@ const TYPE_LABELS = {
   product: 'Product',
   category: 'Category',
   brand: 'Brand',
-  order: 'Order',
   user: 'User',
 };
 
@@ -150,7 +143,6 @@ const AdminLayout = ({ children }) => {
       } catch {}
     }
     setNotifOpen(false);
-    if (notif.order_id) navigate('/admin/orders');
   };
 
   const handleMarkAllRead = async () => {
@@ -199,19 +191,16 @@ const AdminLayout = ({ children }) => {
   };
 
   const allMenuItems = [
-    { name: 'Dashboard',          icon: <LayoutDashboard size={20} />, path: '/admin' },
-    { name: 'Categories',         icon: <Layers size={20} />,          path: '/admin/categories' },
-    { name: 'Brands',             icon: <Briefcase size={20} />,       path: '/admin/brands' },
-    { name: 'Products',           icon: <Package size={20} />,         path: '/admin/products' },
-    { name: 'Discounts & Coupons',icon: <Tag size={20} />,             path: '/admin/discounts',  permission: 'manageDiscounts' },
-    { name: 'Orders',             icon: <ShoppingCart size={20} />,    path: '/admin/orders' },
-    { name: 'Finance',            icon: <BarChart3 size={20} />,       path: '/admin/finance',    permission: 'manageOrders' },
-    { name: 'Proforma',           icon: <ClipboardCheck size={20} />,  path: '/admin/proforma' },
-    { name: 'Content',            icon: <FileText size={20} />,        path: '/admin/blogs',      permission: 'manageContent' },
-    { name: 'Projects',           icon: <FolderOpen size={20} />,      path: '/admin/projects',   permission: 'manageContent' },
-    { name: 'Logs',               icon: <ClipboardList size={20} />,   path: '/admin/logs' },
-    { name: 'Users',              icon: <UsersIcon size={20} />,       path: '/admin/users',      permission: 'manageUsers' },
-    { name: 'Settings',           icon: <Settings size={20} />,        path: '/admin/settings',   permission: 'manageSettings' },
+    { name: 'Dashboard',  icon: <LayoutDashboard size={20} />, path: '/admin' },
+    { name: 'Categories', icon: <Layers size={20} />,          path: '/admin/categories' },
+    { name: 'Brands',     icon: <Briefcase size={20} />,       path: '/admin/brands' },
+    { name: 'Products',   icon: <Package size={20} />,         path: '/admin/products' },
+    { name: 'Inquiries',  icon: <ClipboardList size={20} />,   path: '/admin/inquiries' },
+    { name: 'Content',    icon: <FileText size={20} />,        path: '/admin/blogs',    permission: 'manageContent' },
+    { name: 'Projects',   icon: <FolderOpen size={20} />,      path: '/admin/projects', permission: 'manageContent' },
+    { name: 'Logs',       icon: <ClipboardList size={20} />,   path: '/admin/logs' },
+    { name: 'Users',      icon: <UsersIcon size={20} />,       path: '/admin/users',    permission: 'manageUsers' },
+    { name: 'Settings',   icon: <Settings size={20} />,        path: '/admin/settings', permission: 'manageSettings' },
   ];
   const menuItems = allMenuItems.filter(item => !item.permission || can(item.permission));
 

@@ -12,7 +12,6 @@ import { useSiteSettings } from '../hooks/useSiteSettings';
 import api from '../api';
 import { LogoCloud } from '../components/ui/LogoCloud';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { useCart } from '../context/CartContext';
 import CustomPhoneInput from '../components/ui/PhoneInput';
 import ProductCard from '../components/ProductCard';
 import { createBlogUrl } from '../utils/url';
@@ -390,12 +389,15 @@ const Home = () => {
                     </div>
                   </button>
                 </Link>
-                <Link to="/cart">
-                  <button className="w-full sm:w-auto group bg-white/5 backdrop-blur-md border border-white/20 text-white px-8 py-4 rounded-xl font-bold hover:bg-white/10 transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
-                    View Cart
-                    <Sparkles className="ml-3 w-5 h-5 text-yellow-300 group-hover:scale-125 transition-transform" />
-                  </button>
-                </Link>
+                <a
+                  href="https://wa.me/233574101615?text=Hi%2C%20I%20would%20like%20to%20request%20a%20quote%20for%20your%20products."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto group bg-white/5 backdrop-blur-md border border-white/20 text-white px-8 py-4 rounded-xl font-bold hover:bg-white/10 transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center"
+                >
+                  Get a Quote
+                  <Sparkles className="ml-3 w-5 h-5 text-yellow-300 group-hover:scale-125 transition-transform" />
+                </a>
               </div>
             </div>
           </div>

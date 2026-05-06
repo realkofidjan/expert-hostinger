@@ -7,53 +7,6 @@ const { getAssetPath } = require('../utils/imageHandler');
 const { optimizeImage } = require('../utils/imageOptimizer');
 const { getIo } = require('../utils/socket');
 
-/* ─── Sale helpers (no JSON SQL functions — pure JS) ────────────────────────
-   Fetches all currently active sales and returns a function that resolves
-   the best sale for a given product row { id, price, category_id }.
-──────────────────────────────────────────────────────────────────────────────*/
-const getActiveSales = async () => {
-    try {
-        const [rows] = await db.query(
-            `SELECT id, name, type, value, scope, target_ids
-             FROM sales
-             WHERE is_active = 1 AND NOW() BETWEEN starts_at AND ends_at`
-        );
-        return rows.map(s => ({
-            ...s,
-            targetIds: (() => {
-                try {
-                    const parsed = typeof s.target_ids === 'string'
-                        ? JSON.parse(s.target_ids)
-                        : (s.target_ids || []);
-                    return parsed.map(Number);
-                } catch { return []; }
-            })()
-        }));
-    } catch (e) {
-        // sales table may not exist yet on this environment
-        return [];
-    }
-};
-
-const applySaleToProduct = (product, activeSales) => {
-    const pid = Number(product.id);
-    const cid = Number(product.category_id);
-    const price = parseFloat(product.price);
-
-    // Priority: product-specific > category > all
-    const match =
-        activeSales.find(s => s.scope === 'products' && s.targetIds.includes(pid)) ||
-        activeSales.find(s => s.scope === 'categories' && s.targetIds.includes(cid)) ||
-        activeSales.find(s => s.scope === 'all');
-
-    if (match) {
-        product.sale_price = match.type === 'percentage'
-            ? Math.round(Math.max(0, price * (1 - match.value / 100)) * 100) / 100
-            : Math.round(Math.max(0, price - match.value) * 100) / 100;
-        product.active_sale_name = match.name;
-    }
-    return product;
-};
 
 /**
  * @desc    Get all products
@@ -66,46 +19,12 @@ const getAllProducts = async (req, res) => {
         const offset = (page - 1) * limit;
         const categoryId = req.query.category;
         const search = req.query.q;
-        const { minPrice, maxPrice, brand, color, onSale, isFeatured } = req.query;
+        const { brand, color, isFeatured } = req.query;
 
-        // Resolve active sales in JS — no MySQL JSON functions needed
-        const activeSales = await getActiveSales();
+        const products = await Product.getAll({ limit, offset, categoryId, search, brand, color, isFeatured });
+        const total = await Product.getTotalCount({ categoryId, search, brand, color, isFeatured });
 
-        // For onSale filter: compute which product IDs are on sale, then pass to query
-        let saleProductIds = undefined;
-        if (onSale === 'true') {
-            if (activeSales.length === 0) {
-                return res.json({ products: [], pagination: { total: 0, pages: 0, currentPage: page, limit } });
-            }
-            const hasAll = activeSales.some(s => s.scope === 'all');
-            if (!hasAll) {
-                // Fetch all product IDs and filter against active sales
-                const [allProds] = await db.query('SELECT id, category_id FROM products WHERE status = "active"');
-                saleProductIds = allProds
-                    .filter(p => {
-                        const pid = Number(p.id), cid = Number(p.category_id);
-                        return activeSales.some(s =>
-                            (s.scope === 'products' && s.targetIds.includes(pid)) ||
-                            (s.scope === 'categories' && s.targetIds.includes(cid))
-                        );
-                    })
-                    .map(p => p.id);
-                if (saleProductIds.length === 0) {
-                    return res.json({ products: [], pagination: { total: 0, pages: 0, currentPage: page, limit } });
-                }
-            }
-        }
-
-        const products = await Product.getAll({
-            limit, offset, categoryId, search,
-            minPrice, maxPrice, brand, color, isFeatured, saleProductIds
-        });
-        const total = await Product.getTotalCount({
-            categoryId, search,
-            minPrice, maxPrice, brand, color, isFeatured, saleProductIds
-        });
-
-        // Attach variants + sale prices
+        // Attach variants
         if (products.length > 0) {
             const productIds = products.map(p => p.id);
             const [variants] = await db.query(
@@ -114,7 +33,6 @@ const getAllProducts = async (req, res) => {
             );
             products.forEach(p => {
                 p.variants = variants.filter(v => v.product_id === p.id);
-                applySaleToProduct(p, activeSales);
             });
         }
 
@@ -140,9 +58,6 @@ const getProductById = async (req, res) => {
     try {
         const product = await Product.getById(req.params.id);
         if (!product) return res.status(404).json({ error: 'Product not found' });
-        // Apply active sale in JS
-        const activeSales = await getActiveSales();
-        applySaleToProduct(product, activeSales);
         res.json(product);
     } catch (error) {
         res.status(500).json({ error: 'Server error', details: error.message });
@@ -155,45 +70,30 @@ const getProductById = async (req, res) => {
  */
 const createProduct = async (req, res) => {
     try {
-        let { 
-            name, sku, price, stock, description, specifications, category_id, 
-            subcategory_id, brand, color, dimensions, 
+        let {
+            name, sku, description, specifications, category_id,
+            subcategory_id, brand, color, dimensions,
             weight_capacity, material, fabric_type, warranty, certifications,
-            is_featured,
-            status, variants 
+            is_featured, status, variants
         } = req.body;
-
-        console.log('--- PRODUCT CREATION DEBUG ---');
-        console.log('Name:', name);
-        console.log('Raw variants from body:', req.body.variants);
 
         // SKU Uniqueness Check
         const existing = await Product.getBySku(sku);
         if (existing) {
             return res.status(400).json({ error: `SKU '${sku}' already exists.` });
         }
-        
+
         let parsedVariants = [];
         if (variants) {
             if (typeof variants === 'string') {
-                try {
-                    parsedVariants = JSON.parse(variants);
-                    console.log('Parsed variants (string):', parsedVariants);
-                } catch (e) {
-                    console.error('Failed to parse variants string:', e.message);
-                    parsedVariants = [];
-                }
+                try { parsedVariants = JSON.parse(variants); } catch { parsedVariants = []; }
             } else if (Array.isArray(variants)) {
                 parsedVariants = variants;
-                console.log('Variants is already array:', parsedVariants);
             }
         }
 
         const productId = await Product.create({
-            name, sku, 
-            price: parseFloat(price) || 0,
-            stock: parseInt(stock) || 0,
-            description,
+            name, sku, description,
             specifications,
             category_id: parseInt(category_id) || null,
             subcategory_id: parseInt(subcategory_id) || null,
@@ -247,12 +147,11 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        let { 
-            name, sku, price, stock, description, specifications, category_id, 
-            subcategory_id, brand, color, dimensions, 
+        let {
+            name, sku, description, specifications, category_id,
+            subcategory_id, brand, color, dimensions,
             weight_capacity, material, fabric_type, warranty, certifications,
-            is_featured,
-            status, variants 
+            is_featured, status, variants
         } = req.body;
 
         // SKU Uniqueness Check (if changed)
@@ -267,21 +166,14 @@ const updateProduct = async (req, res) => {
         let parsedVariants = [];
         if (variants) {
             if (typeof variants === 'string') {
-                try {
-                    parsedVariants = JSON.parse(variants);
-                } catch (e) {
-                    parsedVariants = [];
-                }
+                try { parsedVariants = JSON.parse(variants); } catch { parsedVariants = []; }
             } else if (Array.isArray(variants)) {
                 parsedVariants = variants;
             }
         }
 
         await Product.update(id, {
-            name, sku, 
-            price: parseFloat(price) || 0,
-            stock: parseInt(stock) || 0,
-            description,
+            name, sku, description,
             specifications,
             category_id: parseInt(category_id) || null,
             subcategory_id: parseInt(subcategory_id) || null,
@@ -395,9 +287,9 @@ const getTemplate = async (req, res) => {
         const brands = await BrandModel.getAll();
 
         const mainData = [
-            ["Name", "SKU", "Price", "Stock", "Category", "Subcategory", "Brand", "Description", "Image URLs", "Variants"],
-            ["Ergonomic Executive Chair", "EXE-CHR-001", 12500.00, "", "Furniture", "Executive Chairs", "Expert", "Premium ergonomic chair with lumbar support", "https://photos.app.goo.gl/example1", "Black:120x60x75cm:20, Black:160x80x75cm:10, Grey:120x60x75cm:15"],
-            ["Office Side Table", "SIDE-TBL-001", 4500.00, "", "Furniture", "Tables", "Expert", "Compact side table", "", "White:30, Brown:25"]
+            ["Name", "SKU", "Category", "Subcategory", "Brand", "Description", "Image URLs", "Variants"],
+            ["Ergonomic Executive Chair", "EXE-CHR-001", "Furniture", "Executive Chairs", "Expert", "Premium ergonomic chair with lumbar support", "https://photos.app.goo.gl/example1", "Black:120x60x75cm, Grey:120x60x75cm"],
+            ["Office Side Table", "SIDE-TBL-001", "Furniture", "Tables", "Expert", "Compact side table", "", "White, Brown"]
         ];
 
         const refData = [["Valid Categories", "Valid Subcategories", "Valid Brands"]];
@@ -421,7 +313,7 @@ const getTemplate = async (req, res) => {
         const wsMain = XLSX.utils.aoa_to_sheet(mainData);
         const wsRef = XLSX.utils.aoa_to_sheet(refData);
 
-        XLSX.utils.book_append_sheet(wb, wsMain, "Inventory Sheet");
+        XLSX.utils.book_append_sheet(wb, wsMain, "Products Sheet");
         XLSX.utils.book_append_sheet(wb, wsRef, "System Reference");
         
         const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
@@ -441,20 +333,10 @@ const getTemplate = async (req, res) => {
  */
 const getProductMeta = async (req, res) => {
     try {
-        // Get min/max price
-        const [priceResult] = await db.query('SELECT MIN(price) as minPrice, MAX(price) as maxPrice FROM products');
-        
-        // Get all unique colors from variants table only
         const [variantColors] = await db.query('SELECT DISTINCT color_name FROM product_variants WHERE color_name IS NOT NULL AND color_name != ""');
-        
         const allColors = new Set();
         variantColors.forEach(c => allColors.add(c.color_name.trim()));
-        
-        res.json({
-            minPrice: parseFloat(priceResult[0].minPrice) || 0,
-            maxPrice: parseFloat(priceResult[0].maxPrice) || 50000,
-            colors: Array.from(allColors).sort()
-        });
+        res.json({ colors: Array.from(allColors).sort() });
     } catch (error) {
         res.status(500).json({ error: 'Server error', details: error.message });
     }

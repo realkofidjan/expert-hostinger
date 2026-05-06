@@ -35,7 +35,6 @@ const Products = () => {
   const [newProduct, setNewProduct] = useState({
     name: '',
     sku: '',
-    price: '',
     description: '',
     specifications: '',
     category_id: '',
@@ -136,7 +135,6 @@ const Products = () => {
       setNewProduct({
         name: detailedProduct.name,
         sku: detailedProduct.sku,
-        price: detailedProduct.price,
         description: detailedProduct.description,
         specifications: detailedProduct.specifications || '',
         category_id: detailedProduct.category_id || '',
@@ -165,7 +163,7 @@ const Products = () => {
   const closePanel = () => {
     setEditingProduct(null);
     setNewProduct({
-      name: '', sku: '', price: '',
+      name: '', sku: '',
       description: '', specifications: '', category_id: '', subcategory_id: '',
       brand: '', dimensions: '',
       weight_capacity: '', material: '', fabric_type: '', warranty: '', certifications: '',
@@ -180,7 +178,7 @@ const Products = () => {
   const handleAddVariant = () => {
     setNewProduct({
       ...newProduct,
-      variants: [...newProduct.variants, { color_name: '', color_code: '', dimensions: '', stock_quantity: 0 }]
+      variants: [...newProduct.variants, { color_name: '', color_code: '', dimensions: '' }]
     });
   };
 
@@ -423,14 +421,6 @@ const Products = () => {
                               <ShoppingBag size={28} />
                             </div>
                           )}
-                          {/* Stock badge */}
-                          <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-[9px] font-black border ${
-                            parseInt(product.stock) > 0
-                              ? 'bg-green-500/80 text-white border-green-400/50'
-                              : 'bg-red-500/80 text-white border-red-400/50'
-                          }`}>
-                            {parseInt(product.stock) > 0 ? `${product.stock} in stock` : 'Out of stock'}
-                          </span>
                         </div>
 
                         {/* Info */}
@@ -451,8 +441,8 @@ const Products = () => {
                             )}
                           </div>
 
-                          <p className="text-green-500 font-black text-base mt-auto">
-                            ₵{parseFloat(product.price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
+                          <p className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-widest mt-auto">
+                            {product.status === 'active' ? '🟢 Active' : '⚪ Inactive'}
                           </p>
                         </div>
 
@@ -566,28 +556,6 @@ const Products = () => {
                             value={newProduct.brand}
                             onChange={(e) => setNewProduct({ ...newProduct, brand: e.target.value })}
                           />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-2">₵ Price (GHS) </label>
-                            <input
-                              required type="number"
-                              className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:outline-none focus:border-green-500 font-bold text-sm"
-                              value={newProduct.price}
-                              onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                            />
-                          </div>
-                          {newProduct.variants?.length === 0 && (
-                            <div className="animate-scaleIn">
-                              <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em] mb-2">Initial Stock</label>
-                              <input
-                                required type="number" min="0"
-                                className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-xl p-3 text-[var(--text-primary)] focus:outline-none focus:border-yellow-500 font-bold text-sm"
-                                value={newProduct.stock || 0}
-                                onChange={(e) => setNewProduct({ ...newProduct, stock: e.target.value })}
-                              />
-                            </div>
-                          )}
                         </div>
                       </div>
 
@@ -769,15 +737,6 @@ const Products = () => {
                                       />
                                     </div>
                                   </div>
-                                  <div>
-                                    <label className="block text-[8px] font-black text-[var(--text-muted)] uppercase mb-1 tracking-widest">Stock Units</label>
-                                    <input
-                                      type="number" required
-                                      className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-lg p-2 text-[var(--text-primary)] text-[11px] font-bold focus:outline-none focus:border-yellow-500"
-                                      value={variant.stock_quantity}
-                                      onChange={(e) => handleVariantChange(index, 'stock_quantity', e.target.value)}
-                                    />
-                                  </div>
                                 </div>
                                 <button
                                   type="button"
@@ -953,7 +912,7 @@ const Products = () => {
                       <div className="flex flex-col gap-2">
                         <span className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-[0.2em]">Required Columns</span>
                         <div className="flex flex-wrap gap-2">
-                          {['Name', 'SKU', 'Price', 'Category', 'Subcategory', 'Brand', 'Stock', 'Variants'].map(col => (
+                          {['Name', 'SKU', 'Category', 'Subcategory', 'Brand', 'Variants', 'Image URLs'].map(col => (
                             <span key={col} className="px-2 py-1 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg text-[9px] font-bold text-[var(--text-primary)]">{col}</span>
                           ))}
                         </div>
@@ -1005,7 +964,7 @@ const Products = () => {
                         </h4>
                         <div className="grid grid-cols-1 gap-4">
                           {[
-                            { title: 'STOCK & VARIANTS', text: 'If you add variants (e.g. Black:10, White:5), leave the Stock column empty.' },
+                            { title: 'VARIANTS FORMAT', text: 'Use Color or Color:Dimensions format, e.g. "Black, White:120x60cm".' },
                             { title: 'CATEGORY & BRAND NAMES', text: 'Use category and brand names, not ID numbers.' },
                             { title: 'FILE REQUIREMENTS', text: 'Do not upload password-protected or corrupted spreadsheet files.' }
                           ].map((item, i) => (
@@ -1103,8 +1062,6 @@ const Products = () => {
                             <th className="px-6 py-5 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Product Name</th>
                             <th className="px-6 py-5 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">CATEGORY</th>
                             <th className="px-6 py-5 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">BRAND</th>
-                            <th className="px-6 py-5 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest text-right">PRICE</th>
-                            <th className="px-6 py-5 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest text-right">STOCK</th>
                             <th className="px-6 py-5 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest text-center">VARIANTS</th>
                             <th className="px-6 py-5 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest text-center">Images</th>
                             <th className="px-6 py-5 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Issues</th>
@@ -1128,8 +1085,6 @@ const Products = () => {
                               <td className="px-6 py-5 text-xs font-bold text-[var(--text-secondary)]">{row.name}</td>
                               <td className="px-6 py-5 text-[10px] text-[var(--text-muted)]">{row.Category || row.category || '—'}</td>
                               <td className="px-6 py-5 text-[10px] text-[var(--text-muted)]">{row.brand || '—'}</td>
-                              <td className="px-6 py-5 text-[10px] font-bold text-[var(--text-primary)] text-right">{row.price != null ? `₵${Number(row.price).toFixed(2)}` : '—'}</td>
-                              <td className="px-6 py-5 text-[10px] text-[var(--text-muted)] text-right">{row.Stock ?? row.stock ?? '—'}</td>
                               <td className="px-6 py-5 text-center">
                                 <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tighter ${row.variants.length > 0 ? 'bg-yellow-500/10 text-yellow-500' : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'}`}>
                                   {row.variants.length} COLORS

@@ -1,11 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Eye, Star, ArrowRight, Heart } from 'lucide-react';
-import { useCart } from '../context/CartContext';
-import { useWishlist } from '../context/WishlistContext';
+import { Eye, ArrowRight } from 'lucide-react';
 import { createProductUrl, getImageUrl } from '../utils/url';
-
-
+import QuoteButton from './QuoteButton';
 
 const getColorCode = (name) => {
   const colors = {
@@ -26,25 +23,8 @@ const getColorCode = (name) => {
 };
 
 const ProductCard = ({ product }) => {
-  const { addToCart } = useCart();
-  const { toggleWishlist, isWishlisted } = useWishlist();
-  const activeWishlisted = isWishlisted(product.id);
   const img = getImageUrl(product.primary_image);
   const productUrl = createProductUrl(product);
-
-  const handleAddToCart = (e) => {
-    e.preventDefault();
-    if (product.variants?.length > 0) {
-      window.location.href = productUrl;
-      return;
-    }
-    addToCart({
-      id: product.id,
-      name: product.name,
-      image: img,
-      price: product.price,
-    });
-  };
 
   return (
     <div className="group bg-white dark:bg-gray-800 rounded-[2rem] p-3 shadow-lg hover:shadow-2xl transition-all duration-500 border border-gray-100 dark:border-gray-700 overflow-hidden hover:-translate-y-1 flex flex-col">
@@ -61,21 +41,6 @@ const ProductCard = ({ product }) => {
             <span className="text-4xl">🪑</span>
           </div>
         )}
-        
-        {/* Wishlist Button */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            toggleWishlist(product.id);
-          }}
-          className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md transition-all duration-300 z-10 shadow-lg ${
-            activeWishlisted 
-              ? 'bg-red-500 text-white translate-y-0 opacity-100' 
-              : 'bg-white/80 text-gray-400 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2 hover:text-red-500 hover:bg-white'
-          }`}
-        >
-          <Heart className={`w-4 h-4 ${activeWishlisted ? 'fill-current' : ''}`} />
-        </button>
 
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
@@ -88,17 +53,13 @@ const ProductCard = ({ product }) => {
           </Link>
         </div>
 
-        {product.sale_price != null ? (
-          <div className="absolute top-3 left-3 bg-red-500 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow">
-            SALE
-          </div>
-        ) : product.is_featured && (
+        {product.is_featured && (
           <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-gray-900 shadow">
             Featured
           </div>
         )}
         {product.variants?.length > 0 && (
-          <div className="absolute top-12 right-3 bg-green-500/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow">
+          <div className="absolute top-3 right-3 bg-green-500/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow">
             {product.variants.length} Colors
           </div>
         )}
@@ -106,71 +67,42 @@ const ProductCard = ({ product }) => {
 
       {/* Info */}
       <div className="px-2 pb-2 flex-1 flex flex-col">
-        <div className="flex items-start justify-between mb-1.5">
-          <Link to={productUrl} className="flex-1">
+        <div className="mb-1.5">
+          <Link to={productUrl}>
             <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-tight line-clamp-2 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
               {product.name}
             </h3>
           </Link>
-          <div className="flex items-center text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded-lg flex-shrink-0 ml-2">
-            <Star className="w-3 h-3 fill-current" />
-            <span className="text-[10px] text-gray-600 dark:text-gray-300 ml-1 font-bold">4.9</span>
-          </div>
         </div>
 
         {product.category_name && (
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-4 font-medium uppercase tracking-wider">{product.category_name}</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-3 font-medium uppercase tracking-wider">{product.category_name}</p>
         )}
 
-        <div className="pt-5 border-t border-gray-100 dark:border-gray-700 mt-auto">
-          <div className="flex items-center justify-between gap-4">
-            <Link
-              to={productUrl}
-              className="group/btn flex-1 flex flex-col items-start gap-3"
-            >
-              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-green-600 group-hover/btn:text-green-700 transition-colors">
-                {product.variants?.length > 0 
-                  ? `Select from ${product.variants.length} colors` 
-                  : 'View Details'}
-                <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
-              </div>
-              
-              {product.variants?.length > 0 && (
-                <div className="flex gap-1.5">
-                  {product.variants.slice(0, 6).map((v, i) => (
-                    <div 
-                      key={i} 
-                      className="w-3 h-3 rounded-full border border-gray-100 dark:border-gray-600 shadow-sm"
-                      style={{ backgroundColor: v.color_code || getColorCode(v.color_name) }}
-                    />
-                  ))}
-                  {product.variants.length > 6 && (
-                    <span className="text-[8px] font-bold text-gray-400">+{product.variants.length - 6}</span>
-                  )}
-                </div>
-              )}
-            </Link>
-
-            {product.price > 0 && (
-              <div className="text-right">
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Price</p>
-                {product.sale_price != null ? (
-                  <>
-                    <p className="text-[10px] text-gray-400 line-through leading-none">
-                      ₵{parseFloat(product.price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-sm font-black text-red-500">
-                      ₵{parseFloat(product.sale_price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm font-black text-gray-900 dark:text-white">
-                    ₵{parseFloat(product.price).toLocaleString('en-GH', { minimumFractionDigits: 2 })}
-                  </p>
-                )}
-              </div>
+        {product.variants?.length > 0 && (
+          <div className="flex gap-1.5 mb-3">
+            {product.variants.slice(0, 6).map((v, i) => (
+              <div
+                key={i}
+                className="w-3 h-3 rounded-full border border-gray-100 dark:border-gray-600 shadow-sm"
+                style={{ backgroundColor: v.color_code || getColorCode(v.color_name) }}
+              />
+            ))}
+            {product.variants.length > 6 && (
+              <span className="text-[8px] font-bold text-gray-400">+{product.variants.length - 6}</span>
             )}
           </div>
+        )}
+
+        <div className="pt-4 border-t border-gray-100 dark:border-gray-700 mt-auto flex items-center justify-between gap-2">
+          <Link
+            to={productUrl}
+            className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 transition-colors"
+          >
+            View Details
+            <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+          </Link>
+          <QuoteButton product={product} size="sm" />
         </div>
       </div>
     </div>

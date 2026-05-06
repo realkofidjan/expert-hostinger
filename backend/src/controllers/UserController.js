@@ -71,87 +71,20 @@ const getAllUsers = async (req, res) => {
  */
 const getStats = async (req, res) => {
     try {
-        // Run all DB queries in parallel
         const [
-            [userCount],
-            [customerCount],
             [productCount],
-            [orderCount],
-            [pendingOrderCount],
-            [lowStockProducts],
-            [lowStockCount],
-            [recentOrders],
-            [revenueTotal],
-            [revenueMonth],
-            [bestSellingProducts],
+            [inquiryCount],
         ] = await Promise.all([
-            db.query('SELECT COUNT(*) as count FROM users'),
-            db.query(`SELECT COUNT(*) as count FROM users WHERE role = 'customer'`),
             db.query('SELECT COUNT(*) as count FROM products'),
-            db.query(`SELECT COUNT(*) as count FROM orders WHERE status != 'cancelled'`),
-            db.query(`SELECT COUNT(*) as count FROM orders WHERE status = 'pending'`),
-            db.query(`
-                SELECT p.id, p.name, p.stock, c.name as category
-                FROM products p
-                LEFT JOIN categories c ON p.category_id = c.id
-                WHERE p.stock < 10
-                ORDER BY p.stock ASC
-                LIMIT 5
-            `),
-            db.query('SELECT COUNT(*) as count FROM products WHERE stock < 10'),
-            db.query(`
-                SELECT o.*, u.full_name, u.email, u.phone
-                FROM orders o
-                LEFT JOIN users u ON o.user_id = u.id
-                ORDER BY o.created_at DESC
-                LIMIT 5
-            `),
-            db.query(`
-                SELECT COALESCE(SUM(total_amount), 0) as total
-                FROM orders
-                WHERE payment_status IN ('paid', 'verified', 'pending_verification')
-                AND status != 'cancelled'
-            `),
-            db.query(`
-                SELECT COALESCE(SUM(total_amount), 0) as total
-                FROM orders
-                WHERE payment_status IN ('paid', 'verified', 'pending_verification')
-                AND status != 'cancelled'
-                AND MONTH(created_at) = MONTH(CURRENT_DATE())
-                AND YEAR(created_at) = YEAR(CURRENT_DATE())
-            `),
-            db.query(`
-                SELECT p.id, p.name,
-                    (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as primary_image,
-                    SUM(oi.quantity) as sold_qty, SUM(oi.subtotal) as total_revenue
-                FROM order_items oi
-                JOIN products p ON oi.product_id = p.id
-                JOIN orders o ON oi.order_id = o.id
-                WHERE o.payment_status IN ('paid', 'verified', 'pending_verification')
-                AND o.status != 'cancelled'
-                GROUP BY p.id
-                ORDER BY sold_qty DESC
-                LIMIT 5
-            `),
+            db.query('SELECT COUNT(*) as count FROM inquiries'),
         ]);
 
         const storage = _storageCache;
 
         res.json({
-            totalUsers: userCount[0].count,
-            totalCustomers: customerCount[0].count,
             totalProducts: productCount[0].count,
-            totalOrders: orderCount[0].count,
-            pendingOrders: pendingOrderCount[0].count,
+            totalInquiries: inquiryCount[0].count,
             storage,
-            lowStockProducts,
-            lowStockCount: lowStockCount[0].count,
-            recentOrders,
-            financials: {
-                totalRevenue: revenueTotal[0].total,
-                thisMonthRevenue: revenueMonth[0].total
-            },
-            bestSellingProducts
         });
     } catch (error) {
         console.error('GET_STATS_ERROR:', error);

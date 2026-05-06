@@ -1,74 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAlert } from '../../context/AlertContext';
-import { useSocket } from '../../context/SocketContext';
 import api from '../../api';
 import AdminLayout from '../../components/admin/AdminLayout';
 import {
   TrendingUp,
-  Users,
-  ShoppingCart,
-  MessageSquare,
   Package,
-  Clock,
+  MessageSquare,
   CheckCircle,
   Plus,
-  AlertCircle,
   FileText,
-  HardDrive
+  HardDrive,
+  Briefcase,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 const Dashboard = () => {
-  const { showAlert } = useAlert();
-  const socket = useSocket();
   const [stats, setStats] = useState({
-    totalOrders: 0,
     totalProducts: 0,
-    totalCustomers: 0,
     totalInquiries: 0,
-    pendingOrders: 0,
-    lowStockCount: 0,
-    lowStockProducts: [],
-    financials: { totalRevenue: 0, thisMonthRevenue: 0 },
-    bestSellingProducts: [],
     storage: { used: 0, limit: 1, percent: 0 }
   });
 
-  const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
-  useEffect(() => {
-    if (socket) {
-      socket.emit('join', 'admin_room'); // Join a generic admin room or just listen to global events
-
-      socket.on('admin_new_order', (data) => {
-        showAlert('success', 'New Order Alert', `Order #${data.orderNumber} received from ${data.customer_name}!`);
-        fetchDashboardData();
-      });
-
-      socket.on('admin_order_cancelled', (data) => {
-        showAlert('warning', 'Order Cancellation', `Order #${data.orderNumber} has been cancelled by the customer.`);
-        fetchDashboardData();
-      });
-
-      socket.on('admin_receipt_uploaded', (data) => {
-        showAlert('info', 'Receipt Uploaded', `A new bank receipt was uploaded for order #${data.orderNumber}.`);
-        fetchDashboardData();
-      });
-
-      return () => {
-        socket.off('admin_new_order');
-        socket.off('admin_order_cancelled');
-        socket.off('admin_receipt_uploaded');
-      };
-    }
-  }, [socket]);
 
   const fetchDashboardData = async () => {
     try {
@@ -77,19 +35,10 @@ const Dashboard = () => {
       const data = response.data;
 
       setStats({
-        totalOrders: data.totalOrders || 0,
         totalProducts: data.totalProducts || 0,
-        totalCustomers: data.totalCustomers || 0,
-        totalInquiries: data.totalQuotes || 0,
-        pendingOrders: data.pendingOrders || 0,
-        lowStockCount: data.lowStockCount || 0,
-        lowStockProducts: data.lowStockProducts || [],
-        financials: data.financials || { totalRevenue: 0, thisMonthRevenue: 0 },
-        bestSellingProducts: data.bestSellingProducts || [],
+        totalInquiries: data.totalInquiries || data.totalQuotes || 0,
         storage: data.storage || { used: 0, limit: 1, percent: 0 }
       });
-
-      setRecentOrders(data.recentOrders || []);
     } catch (err) {
       console.error('Dashboard Error:', err);
       toast.error('Failed to load dashboard metrics');
@@ -99,10 +48,9 @@ const Dashboard = () => {
   };
 
   const statCards = [
-    { title: 'Total Revenue', value: `GHS ${parseFloat(stats.financials.totalRevenue).toLocaleString()}`, icon: <TrendingUp />, color: 'from-blue-500 to-indigo-600' },
-    { title: 'Customers', value: stats.totalCustomers, icon: <Users />, color: 'from-green-500 to-emerald-600' },
-    { title: 'Pending Orders', value: stats.pendingOrders, icon: <Clock />, color: 'from-yellow-400 to-orange-500' },
-    { title: 'Storage Used', value: `${stats.storage.percent}%`, icon: <HardDrive />, color: 'from-red-500 to-orange-600' },
+    { title: 'Total Products', value: stats.totalProducts, icon: <Package />, color: 'from-green-500 to-emerald-600' },
+    { title: 'Total Inquiries', value: stats.totalInquiries, icon: <MessageSquare />, color: 'from-blue-500 to-indigo-600' },
+    { title: 'Storage Used', value: `${parseFloat(stats.storage.percent).toFixed(1)}%`, icon: <HardDrive />, color: 'from-red-500 to-orange-600' },
   ];
 
   const formatSize = (bytes) => {
@@ -154,227 +102,105 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Recent Orders Table */}
-          <div className="lg:col-span-2 glass rounded-3xl overflow-hidden">
-            <div className="p-6 border-b border-[var(--border-color)] flex items-center justify-between bg-[var(--bg-secondary)]/50">
-              <h3 className="font-bold text-lg flex items-center gap-2 text-[var(--text-primary)]">
-                <Package size={20} className="text-green-500" />
-                Recent Orders
-              </h3>
-              <button onClick={() => navigate('/admin/orders')} className="text-sm text-green-500 hover:underline">View All</button>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-[var(--bg-secondary)] text-xs uppercase tracking-wider text-[var(--text-muted)] font-semibold border-b border-[var(--border-color)]">
-                    <th className="px-6 py-4">Order ID</th>
-                    <th className="px-6 py-4">Customer</th>
-                    <th className="px-6 py-4">Total</th>
-                    <th className="px-6 py-4">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border-color)]">
-                  {loading ? (
-                    <tr><td colSpan="4" className="px-6 py-10 text-center"><div className="animate-spin inline-block w-6 h-6 border-2 border-green-500 rounded-full border-t-transparent"></div></td></tr>
-                  ) : recentOrders.length === 0 ? (
-                    <tr>
-                      <td colSpan="4" className="px-6 py-10 text-center text-[var(--text-muted)]">
-                        No orders recorded yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    recentOrders.map((order) => (
-                      <tr key={order.id} className="hover:bg-[var(--bg-tertiary)] transition-colors text-sm">
-                        <td className="px-6 py-4 font-mono font-medium text-green-500">{order.order_number || `#${order.id}`}</td>
-                        <td className="px-6 py-4 text-[var(--text-primary)]">
-                          {order.customer_name || order.full_name || 'Guest'}
-                        </td>
-                        <td className="px-6 py-4 font-semibold text-[var(--text-primary)]">GHS {parseFloat(order.total_amount).toLocaleString()}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
-                            ${order.status === 'delivered' ? 'bg-green-500/10 text-green-500' :
-                              order.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' :
-                                'bg-blue-500/10 text-blue-500'}`}>
-                            {order.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+          {/* Quick Actions */}
+          <div className="lg:col-span-2 glass rounded-3xl p-6 bg-[var(--bg-secondary)]/10">
+            <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-[var(--text-primary)]">
+              <TrendingUp size={20} className="text-yellow-500" />
+              Administrative Actions
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button
+                onClick={() => navigate('/admin/products')}
+                className="w-full flex items-center gap-3 p-5 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] hover:border-green-500/50 transition-all group text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 group-hover:scale-110 transition-transform shrink-0">
+                  <Plus size={22} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">New Product</p>
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold mt-0.5">Add to catalogue</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/admin/inquiries')}
+                className="w-full flex items-center gap-3 p-5 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] hover:border-blue-500/50 transition-all group text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform shrink-0">
+                  <MessageSquare size={22} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">View Inquiries</p>
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold mt-0.5">Customer quote requests</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/admin/brands')}
+                className="w-full flex items-center gap-3 p-5 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] hover:border-yellow-500/50 transition-all group text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform shrink-0">
+                  <Briefcase size={22} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">Manage Brands</p>
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold mt-0.5">Brand & manufacturer setup</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/admin/blogs')}
+                className="w-full flex items-center gap-3 p-5 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] hover:border-purple-500/50 transition-all group text-left"
+              >
+                <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform shrink-0">
+                  <FileText size={22} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">Create Content</p>
+                  <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold mt-0.5">Blog & article editor</p>
+                </div>
+              </button>
             </div>
           </div>
 
-          {/* Quick Actions / Activity Feed */}
-          <div className="flex flex-col gap-8">
-            {/* Low Stock Alerts */}
-            <div className="glass rounded-3xl p-6 bg-red-500/[0.02]">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg flex items-center gap-2 text-[var(--text-primary)]">
-                  <AlertCircle size={20} className="text-red-500" />
-                  Low Stock Alerts
-                </h3>
-                {stats.lowStockCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black animate-pulse">
-                    {stats.lowStockCount}
-                  </span>
-                )}
+          {/* Storage Card */}
+          <div className="glass rounded-[2rem] p-8 border border-[var(--border-color)] bg-[var(--bg-secondary)]/10">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="p-2.5 rounded-xl bg-red-500/10 text-red-500">
+                <HardDrive size={18} />
               </div>
-
-              <div className="space-y-3">
-                {stats.lowStockProducts?.length === 0 ? (
-                  <div className="py-4 text-center text-[var(--text-muted)] text-xs font-bold uppercase tracking-widest opacity-50">
-                    Inventory healthy
-                  </div>
-                ) : (
-                  stats.lowStockProducts?.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between p-3 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] hover:border-red-500/30 transition-all group">
-                      <div className="overflow-hidden">
-                        <p className="text-sm font-bold text-[var(--text-primary)] truncate group-hover:text-red-400 transition-colors uppercase tracking-tight">{product.name}</p>
-                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-black line-clamp-1">{product.category || 'Uncategorized'}</p>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="text-xs font-black text-red-500">{product.stock}</p>
-                        <p className="text-[8px] text-[var(--text-muted)] uppercase font-bold">In Stock</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+              <h3 className="font-black text-sm uppercase tracking-widest text-[var(--text-primary)]">Storage Allocation</h3>
             </div>
 
-            {/* Best Selling Products */}
-            <div className="glass rounded-3xl p-6 bg-blue-500/[0.02]">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg flex items-center gap-2 text-[var(--text-primary)]">
-                  <ShoppingCart size={20} className="text-blue-500" />
-                  Best Sellers
-                </h3>
-              </div>
-
-              <div className="space-y-3">
-                {stats.bestSellingProducts?.length === 0 ? (
-                  <div className="py-4 text-center text-[var(--text-muted)] text-xs font-bold uppercase tracking-widest opacity-50">
-                    No sales data yet
-                  </div>
-                ) : (
-                  stats.bestSellingProducts?.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between p-3 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] hover:border-blue-500/30 transition-all group">
-                      <div className="flex-1 overflow-hidden">
-                        <p className="text-sm font-bold text-[var(--text-primary)] truncate transition-colors capitalize tracking-tight">{product.name}</p>
-                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-black line-clamp-1">{product.sold_qty} sold</p>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="text-xs font-black text-[var(--text-primary)]">₵{parseFloat(product.total_revenue).toLocaleString()}</p>
-                        <p className="text-[8px] text-[var(--text-muted)] uppercase font-bold">Revenue</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="glass rounded-3xl p-6 bg-[var(--bg-secondary)]/10 flex flex-col flex-1">
-              <h3 className="font-bold text-lg mb-6 flex items-center gap-2 shrink-0 text-[var(--text-primary)]">
-                <TrendingUp size={20} className="text-yellow-500" />
-                Administrative Actions
-              </h3>
-              <div className="space-y-4 flex-1">
-                <button
-                  onClick={() => navigate('/admin/products')}
-                  className="w-full flex items-center justify-between p-4 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] hover:border-green-500/50 transition-all group text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 group-hover:scale-110 transition-transform">
-                      <Plus size={20} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">New Product</p>
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold">New Inventory Entry</p>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => navigate('/admin/brands')}
-                  className="w-full flex items-center justify-between p-4 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] hover:border-blue-500/50 transition-all group text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
-                      <CheckCircle size={20} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">Manage Brands</p>
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold">BrandManufacturer Setup</p>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => navigate('/admin/blogs')}
-                  className="w-full flex items-center justify-between p-4 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-color)] hover:border-purple-500/50 transition-all group text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform">
-                      <FileText size={20} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">Create Content</p>
-                      <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold">Blog & Article Editor</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Storage Pie Chart Card */}
-            <div className="glass rounded-[2rem] p-8 border border-[var(--border-color)] bg-[var(--bg-secondary)]/10">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="p-2.5 rounded-xl bg-red-500/10 text-red-500">
-                  <HardDrive size={18} />
+            <div className="flex flex-col items-center">
+              <div className="relative w-40 h-40 mb-8">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" className="fill-none stroke-[var(--border-color)]" strokeWidth="12" />
+                  <circle
+                    cx="50" cy="50" r="40"
+                    className="fill-none stroke-red-500 transition-all duration-1000 ease-out"
+                    strokeWidth="12"
+                    strokeDasharray={`${stats.storage.percent * 2.51} 251.2`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-black text-[var(--text-primary)] leading-none">{parseFloat(stats.storage.percent).toFixed(2)}%</span>
                 </div>
-                <h3 className="font-black text-sm uppercase tracking-widest text-[var(--text-primary)]">Storage Allocation</h3>
               </div>
 
-              <div className="flex flex-col items-center">
-                {/* Custom SVG Pie Chart */}
-                <div className="relative w-40 h-40 mb-8">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                    <circle
-                      cx="50" cy="50" r="40"
-                      className="fill-none stroke-[var(--border-color)]"
-                      strokeWidth="12"
-                    />
-                    <circle
-                      cx="50" cy="50" r="40"
-                      className="fill-none stroke-red-500 transition-all duration-1000 ease-out"
-                      strokeWidth="12"
-                      strokeDasharray={`${stats.storage.percent * 2.51} 251.2`}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-xl font-black text-[var(--text-primary)] leading-none">{parseFloat(stats.storage.percent).toFixed(2)}%</span>
-                  </div>
+              <div className="w-full space-y-4">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-[var(--text-muted)] uppercase tracking-wider">Used Capacity</span>
+                  <span className="font-black text-[var(--text-primary)]">{formatSize(stats.storage.used)}</span>
                 </div>
-
-                <div className="w-full space-y-4">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-[var(--text-muted)] uppercase tracking-wider">Used Capacity</span>
-                    <span className="font-black text-[var(--text-primary)]">{formatSize(stats.storage.used)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-[var(--text-muted)] uppercase tracking-wider">Total Limit</span>
-                    <span className="font-black text-[var(--text-primary)]">50 GB</span>
-                  </div>
-                  <div className="pt-2">
-                    <div className="h-1.5 w-full bg-[var(--border-color)] rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-red-500 transition-all duration-1000"
-                        style={{ width: `${stats.storage.percent}%` }}
-                      ></div>
-                    </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-[var(--text-muted)] uppercase tracking-wider">Total Limit</span>
+                  <span className="font-black text-[var(--text-primary)]">50 GB</span>
+                </div>
+                <div className="pt-2">
+                  <div className="h-1.5 w-full bg-[var(--border-color)] rounded-full overflow-hidden">
+                    <div className="h-full bg-red-500 transition-all duration-1000" style={{ width: `${stats.storage.percent}%` }} />
                   </div>
                 </div>
               </div>

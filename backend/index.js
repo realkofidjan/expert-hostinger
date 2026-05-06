@@ -28,54 +28,22 @@ const { protect, authorize, optionalProtect } = require('./src/middleware/auth')
 const underConstruction = require('./src/middleware/underConstruction');
 const AuthController = require('./src/controllers/AuthController');
 const BulkUploadController = require('./src/controllers/BulkUploadController');
-const OrderController = require('./src/controllers/OrderController');
 const InquiryController = require('./src/controllers/InquiryController');
-const QuoteController = require('./src/controllers/QuoteController');
 const UserController = require('./src/controllers/UserController');
 const BlogController = require('./src/controllers/BlogController');
 const ProductController = require('./src/controllers/ProductController');
 const CategoryController = require('./src/controllers/CategoryController');
-const PaymentController = require('./src/controllers/PaymentController');
 const BrandController = require('./src/controllers/BrandController');
 const LogController = require('./src/controllers/LogController');
 const SearchController = require('./src/controllers/SearchController');
-const DiscountController = require('./src/controllers/DiscountController');
-const SaleController = require('./src/controllers/SaleController');
 const SettingsController = require('./src/controllers/SettingsController');
-const DeliveryController = require('./src/controllers/DeliveryController');
-const AddressController = require('./src/controllers/AddressController');
 const { NotificationController } = require('./src/controllers/NotificationController');
-const WishlistController = require('./src/controllers/WishlistController');
-const ReviewController = require('./src/controllers/ReviewController');
-const FinanceController = require('./src/controllers/FinanceController');
 const ProjectsController = require('./src/controllers/ProjectsController');
-const ProformaController = require('./src/controllers/ProformaController');
 const { exportBackup, restoreBackup } = require('./src/controllers/BackupController');
 const PermissionsController = require('./src/controllers/PermissionsController');
 
-// ── Multer: in-memory for images, disk for receipts ──────────────────────────
+// ── Multer: in-memory for images ─────────────────────────────────────────────
 const upload = multer({ storage: multer.memoryStorage() });
-
-const receiptsDir = path.join(__dirname, 'uploads', 'receipts');
-if (!fs.existsSync(receiptsDir)) fs.mkdirSync(receiptsDir, { recursive: true });
-
-const receiptStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, receiptsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `receipt-${Date.now()}-${Math.random().toString(36).substr(2, 8)}${ext}`);
-  }
-});
-const receiptUpload = multer({
-  storage: receiptStorage,
-  fileFilter: (req, file, cb) => {
-    const allowed = ['.jpg', '.jpeg', '.png', '.pdf'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) cb(null, true);
-    else cb(new Error('Only JPEG, PNG and PDF files are allowed for receipts'));
-  },
-  limits: { fileSize: 5 * 1024 * 1024 }
-});
 
 const signatureDir = path.join(process.env.ASSETS_DIR || path.join(__dirname, 'assets'), 'signature_imgs');
 if (!fs.existsSync(signatureDir)) fs.mkdirSync(signatureDir, { recursive: true });
@@ -192,66 +160,8 @@ app.post('/api/admin/blogs', protect, authorize('admin', 'sub-admin'), upload.fi
 app.put('/api/admin/blogs/:id', protect, authorize('admin', 'sub-admin'), upload.fields([{ name: 'image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), BlogController.updateBlog);
 app.delete('/api/admin/blogs/:id', protect, authorize('admin', 'sub-admin'), BlogController.deleteBlog);
 
-// ── Orders ────────────────────────────────────────────────────────────────────
-app.get('/api/my-orders', protect, OrderController.getMyOrders);
-app.get('/api/admin/orders', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.getAllOrders);
-app.get('/api/admin/orders/:id', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.getOrderById);
-app.post('/api/admin/orders', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.adminCreateOrder);
-app.post('/api/orders', optionalProtect, OrderController.createOrder);
-app.get('/api/orders/lookup', OrderController.lookupOrder);
-app.get('/api/orders/:orderNumber/details', OrderController.getOrderDetails);
-app.post('/api/orders/:orderNumber/cancel', OrderController.publicCancelOrder);
-app.post('/api/orders/:orderNumber/upload-receipt', receiptUpload.single('bank_receipt'), OrderController.uploadReceipt);
-app.put('/api/admin/orders/:id', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.updateOrder);
-app.delete('/api/admin/orders/:id', protect, authorize('admin'), OrderController.deleteOrder);
-app.patch('/api/admin/orders/:id/status', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.updateStatus);
-app.patch('/api/admin/orders/:id/verify-transfer', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.verifyBankTransfer);
-app.get('/api/admin/orders/:id/document', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.getDocument);
-app.get('/api/admin/orders/:id/preview-receipt', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.previewReceipt);
-app.post('/api/admin/orders/:id/send-receipt', protect, authorize('admin', 'sub-admin', 'staff'), OrderController.sendReceipt);
-
-// ── Delivery Regions ──────────────────────────────────────────────────────────
-app.get('/api/delivery-regions', DeliveryController.getPublic);
-app.get('/api/admin/delivery-regions', protect, authorize('admin', 'sub-admin', 'staff'), DeliveryController.getAll);
-app.put('/api/admin/delivery-regions/:id', protect, authorize('admin'), DeliveryController.update);
-
-// ── User Addresses ────────────────────────────────────────────────────────────
-app.get('/api/my-addresses', protect, AddressController.getMyAddresses);
-app.post('/api/my-addresses', protect, AddressController.saveAddress);
-
-// ── Wishlist & Reviews ────────────────────────────────────────────────────────
-app.get('/api/reviews/product/:productId', ReviewController.getProductReviews);
-app.post('/api/reviews', protect, ReviewController.submitReview);
-app.get('/api/admin/reviews', protect, authorize('admin', 'sub-admin'), ReviewController.getAllReviewsAdmin);
-app.delete('/api/admin/reviews/:id', protect, authorize('admin', 'sub-admin'), ReviewController.deleteReviewAdmin);
-
-app.get('/api/admin/finance', protect, authorize('admin', 'sub-admin', 'staff'), FinanceController.getFinanceStats);
-
-app.get('/api/wishlist', protect, WishlistController.getWishlist);
-app.post('/api/wishlist/toggle', protect, WishlistController.toggleWishlist);
-app.get('/api/wishlist/check/:productId', protect, WishlistController.checkWishlist);
-app.put('/api/my-addresses/:id', protect, AddressController.updateAddress);
-app.delete('/api/my-addresses/:id', protect, AddressController.deleteAddress);
-
-// ── Inquiries ─────────────────────────────────────────────────────────────────
-app.get('/api/admin/inquiries', protect, authorize('admin', 'sub-admin', 'staff'), InquiryController.getAll);
-app.post('/api/inquiries', optionalProtect, InquiryController.create);
-app.patch('/api/admin/inquiries/:id/status', protect, authorize('admin', 'sub-admin', 'staff'), InquiryController.updateStatus);
-
-// ── Quotes (kept for legacy, not shown in UI) ─────────────────────────────────
-app.get('/api/admin/quotes', protect, authorize('admin', 'sub-admin', 'staff'), QuoteController.getAll);
-app.get('/api/my-quotes', protect, QuoteController.getMyQuotes);
-app.post('/api/quotes/:id/reject', protect, QuoteController.reject);
-app.post('/api/quotes', optionalProtect, QuoteController.create);
-app.post('/api/quotes/:id/approve', protect, QuoteController.approve);
-app.patch('/api/admin/quotes/:id/details', protect, authorize('admin', 'sub-admin', 'staff'), QuoteController.updateQuoteDetails);
-app.patch('/api/admin/quotes/:id/status', protect, authorize('admin', 'sub-admin', 'staff'), QuoteController.updateStatus);
-app.post('/api/admin/quotes/:id/confirm-payment', protect, authorize('admin', 'sub-admin', 'staff'), QuoteController.confirmManualPayment);
-
-// ── Payments (Paystack — MoMo) ────────────────────────────────────────────────
-app.post('/api/payments/initialize', optionalProtect, PaymentController.initialize);
-app.get('/api/payments/verify/:reference', PaymentController.verify);
-app.post('/api/payments/webhook', PaymentController.webhook);
+// ── Inquiries (contact form — kept for general enquiries) ─────────────────────
+app.post('/api/inquiries', InquiryController.create);
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 app.get('/api/admin/notifications', protect, authorize('admin', 'sub-admin', 'staff'), NotificationController.getAll);
@@ -270,30 +180,6 @@ app.put('/api/admin/permissions', protect, authorize('admin'), PermissionsContro
 // ── Search ────────────────────────────────────────────────────────────────────
 app.get('/api/admin/search', protect, authorize('admin', 'sub-admin', 'staff'), SearchController.globalSearch);
 
-// ── Discounts ─────────────────────────────────────────────────────────────────
-app.post('/api/coupons/validate', DiscountController.validate); // public
-app.get('/api/admin/discounts', protect, authorize('admin', 'sub-admin', 'staff'), DiscountController.getAll);
-app.post('/api/admin/discounts', protect, authorize('admin'), DiscountController.create);
-app.put('/api/admin/discounts/:id', protect, authorize('admin'), DiscountController.update);
-app.patch('/api/admin/discounts/:id/toggle', protect, authorize('admin'), DiscountController.toggleActive);
-app.delete('/api/admin/discounts/:id', protect, authorize('admin'), DiscountController.remove);
-
-// ── Sales ─────────────────────────────────────────────────────────────────────
-app.get('/api/admin/sales', protect, authorize('admin', 'sub-admin', 'staff'), SaleController.getAll);
-app.post('/api/admin/sales', protect, authorize('admin', 'sub-admin'), SaleController.create);
-
-// ── Proforma ──────────────────────────────────────────────────────────────────
-app.get('/api/admin/proforma', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.getAll);
-app.post('/api/admin/proforma', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.create);
-app.put('/api/admin/proforma/:id', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.update);
-app.post('/api/admin/proforma/:id/send', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.sendByEmail);
-app.get('/api/admin/proforma/:id/download', protect, authorize('admin', 'sub-admin', 'staff'), ProformaController.downloadPdf);
-app.delete('/api/admin/proforma/:id', protect, authorize('admin', 'sub-admin'), ProformaController.delete);
-app.get('/api/admin/sales', protect, authorize('admin', 'sub-admin', 'staff'), SaleController.getAll);
-app.post('/api/admin/sales', protect, authorize('admin'), SaleController.create);
-app.put('/api/admin/sales/:id', protect, authorize('admin'), SaleController.update);
-app.patch('/api/admin/sales/:id/toggle', protect, authorize('admin'), SaleController.toggleActive);
-app.delete('/api/admin/sales/:id', protect, authorize('admin'), SaleController.remove);
 
 // ── Projects ──────────────────────────────────────────────────────────────────
 app.get('/api/projects', ProjectsController.getPublic);
@@ -489,6 +375,41 @@ const db = require('./src/config/db');
     try {
       await db.query("ALTER TABLE users MODIFY COLUMN password VARCHAR(255) NULL");
     } catch { /* already nullable */ }
+
+    // ── Quote-only rework: remove pricing & stock, delete customer accounts ─────
+    // Delete all customer-role users (no longer relevant)
+    try {
+      await db.query("DELETE FROM users WHERE role = 'customer'");
+      console.log('Migration: deleted all customer users');
+    } catch { /* non-critical */ }
+
+    // Drop price columns from products
+    const [prodCols] = await db.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products'"
+    );
+    const prodColNames = prodCols.map(c => c.COLUMN_NAME);
+    for (const col of ['price', 'sale_price', 'cost_price', 'discount_price', 'stock']) {
+      if (prodColNames.includes(col)) {
+        try {
+          await db.query(`ALTER TABLE products DROP COLUMN ${col}`);
+          console.log(`Migration: dropped products.${col}`);
+        } catch { /* skip */ }
+      }
+    }
+
+    // Drop price/stock columns from product_variants
+    const [varCols] = await db.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_variants'"
+    );
+    const varColNames = varCols.map(c => c.COLUMN_NAME);
+    for (const col of ['price_extra', 'stock_quantity', 'price']) {
+      if (varColNames.includes(col)) {
+        try {
+          await db.query(`ALTER TABLE product_variants DROP COLUMN ${col}`);
+          console.log(`Migration: dropped product_variants.${col}`);
+        } catch { /* skip */ }
+      }
+    }
 
     const [subcatsExist] = await db.query("SHOW TABLES LIKE 'subcategories'");
     if (subcatsExist.length === 0) {
